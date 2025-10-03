@@ -1,52 +1,17 @@
-.site-header{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-block: 20px;
+h1 {
+  font-size: 28px;
 }
-
-.brand{
-  font-weight: 800;
-  font-size: 1.25rem;
-  letter-spacing: .3px;
-  color: white;
+h2 {
+  font-size: 18px;
+  margin-top: 4px;
 }
-
-.nav{
-  display: flex;
-  gap: 12px;
+h3 {
+  font-size: 16px;
 }
-.nav-link{
-  color: var(--text);
-  opacity: .9;
+#authSection .row .input {
+  max-width: 280px;
 }
-.nav-link:hover{ opacity: 1; }
-
-.hero{
-  padding-block: 72px 56px;
-}
-.hero .accent{
-  background: linear-gradient(90deg, #38bdf8, #a78bfa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.hero .actions{
-  margin-top: 24px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.site-footer{
-  padding-block: 48px;
-  color: var(--muted);
-  border-top: 1px solid #1f2937;
-  margin-top: 56px;
-}
-
-/* responsivo simples */
-@media (max-width: 640px){
-  .site-header { padding-block: 16px; }
-  .hero { padding-block: 56px 40px; }
+#jobsList .card p {
+  white-space: pre-wrap;
+  margin: 8px 0 0;
 }
