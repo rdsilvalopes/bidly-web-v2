@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bidly – Redefinir senha</title>
+    <link rel="icon" href="../favicon.ico" />
+    <link rel="stylesheet" href="../assets/css/base.css" />
+    <link rel="stylesheet" href="../assets/css/app.css" />
+    <style>
+      .card {
+        max-width: 420px;
+        margin: 12vh auto;
+      }
+      #authMsg.ok {
+        color: #2ecc71;
+      }
+      #authMsg.error {
+        color: #e74c3c;
+      }
+      .muted a {
+        color: inherit;
+        text-decoration: underline;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="wrap">
+    <div class="card">
+      <!-- Painel A: alterar senha (quando vier com token ou estiver logado) -->
+      <div id="panelReset" class="">
+        <h2>Definir nova senha</h2>
+        <p>Informe uma nova senha para sua conta.</p>
+        <input id="newPwd" type="password" placeholder="Nova senha (mín. 8)" />
+        <button id="btnSetPwd" class="btn" style="margin-top: 8px">
+          Salvar
+        </button>
+      </div>
+
+      <!-- Painel B: solicitar novo link (quando NÃO há token de recuperação) -->
+      <div id="panelRequest" class="hidden">
+        <h2>Gerar novo link</h2>
+        <p>Informe seu e-mail para receber um novo link de redefinição.</p>
+        <input id="email" type="email" placeholder="seu@email.com" />
+        <button id="btnSendLink" class="btn" style="margin-top: 8px">
+          Enviar link
+        </button>
+        <p class="muted" style="margin-top: 8px">
+          O link abrirá esta página (<code>/auth/index.html</code>).
+        </p>
+      </div>
+
+      <p id="authMsg" class="muted" style="margin-top: 12px"></p>
+      <p class="muted" style="margin-top: 8px">
+        <a href="../index.html">Voltar ao login</a>
+      </p>
+    </div>
+
+    <!-- libs e client (ordem importa) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+    <script src="../assets/js/supa.js?v=fix1"></script>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const setMsg = (type, text) => {
+        const el = $("authMsg");
+        if (!el) return;
+        el.className = type || "";
+        el.textContent = text || "";
+      };
+      const hasRecoveryToken = () => {
+        const h = (location.hash || "").toLowerCase();
+        return h.includes("access_token=") && h.includes("type=recovery");
+      };
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        await connectSupabase();
+
+        const panelReset = $("panelReset");
+        const panelRequest = $("panelRequest");
+        const btnSave = $("btnSetPwd");
+        const btnSend = $("btnSendLink");
+
+        try {
+          // Se vier com token, o client cria sessão "recovery".
+          const tokenMode = hasRecoveryToken();
+          const {
+            data: { session },
+          } = await sb.auth.getSession();
+          const canReset = tokenMode || !!session;
+
+          if (!canReset) {
+            panelReset.classList.add("hidden");
+            panelRequest.classList.remove("hidden");
+            setMsg(
+              "error",
+              "Link inválido ou expirado. Gere um novo link abaixo."
+            );
+          } else {
+            panelReset.classList.remove("hidden");
+            panelRequest.classList.add("hidden");
+            setMsg("", "");
+          }
+
+          // Limpa o hash (estético/segurança)
+          if (location.hash) history.replaceState(null, "", location.pathname);
+
+          // ===== Salvar nova senha (usa logoutLocal para evitar 403 global) =====
+          btnSave?.addEventListener("click", async () => {
+            const pwd = $("newPwd")?.value || "";
+            if (pwd.length < 8) {
+              setMsg("error", "A senha deve ter no mínimo 8 caracteres.");
+              return;
+            }
+            btnSave.disabled = true;
+            try {
+              const { error } = await sb.auth.updateUser({ password: pwd });
+              if (error) throw error;
+
+              // encerra sessão recovery/local e volta ao login
+              await logoutLocal();
+              setMsg("ok", "Senha redefinida! Redirecionando para o login…");
+              setTimeout(() => (window.location.href = "../index.html"), 900);
+            } catch (e) {
+              console.error(e);
+              setMsg(
+                "error",
+                e?.message || "Falha ao redefinir a senha. Gere um novo link."
+              );
+            } finally {
+              btnSave.disabled = false;
+            }
+          });
+
+          // ===== Enviar novo link =====
+          btnSend?.addEventListener("click", async () => {
+            const email = $("email")?.value?.trim();
+            if (!email) {
+              setMsg("error", "Informe seu e-mail.");
+              return;
+            }
+            btnSend.disabled = true;
+            try {
+              const { error } = await sb.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/auth/index.html`,
+              });
+              if (error) throw error;
+              setMsg(
+                "ok",
+                "Enviamos um novo link por e-mail. Abra o mais recente."
+              );
+            } catch (e) {
+              console.error(e);
+              setMsg(
+                "error",
+                e?.message ||
+                  "Não foi possível enviar o e-mail. Tente novamente."
+              );
+            } finally {
+              btnSend.disabled = false;
+            }
+          });
+        } catch (e) {
+          console.error(e);
+          setMsg("error", "Erro ao inicializar a página de redefinição.");
+          panelReset.classList.add("hidden");
+          panelRequest.classList.remove("hidden");
+        }
+      });
+    </script>
+
+
+  </body>
+</html>
