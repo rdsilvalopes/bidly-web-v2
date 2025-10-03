@@ -3,19 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bidly v2 — DEV</title>
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="/assets/css/base.css" />
-  <link rel="stylesheet" href="/assets/css/app.css" />
+  <title>Bidly v2 — Conecta empresas e hunters</title>
+
+  <!-- Fonte opcional (funciona em localhost) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <link rel="icon" href="favicon.ico" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/app.css" />
 </head>
 <body>
-  <h1>Bidly v2 — ambiente DEV ok ✅</h1>
+  <header class="site-header container">
+    <a class="brand" href="/">Bidly</a>
+    <nav class="nav">
+      <a class="nav-link" href="app/index.html">Entrar</a>
+      <a class="btn btn--ghost" href="auth/index.html">Criar conta</a>
+    </nav>
+  </header>
 
-  <nav>
-    <a href="/app/index.html">Ir para APP</a> ·
-    <a href="/auth/index.html">Login</a>
-  </nav>
+  <main>
+    <section class="hero container">
+      <h1>
+        Conecta empresas com <span class="accent">hunters e recrutadores</span>
+      </h1>
+      <p class="lead">
+        Agilidade, menor custo e transparência.
+      </p>
 
-  <script defer src="/assets/js/app.js"></script>
+      <div class="actions">
+        <a class="btn btn--primary" href="app/index.html">Começar</a>
+        <a class="btn btn--ghost" href="#como-funciona">Como funciona</a>
+      </div>
+    </section>
+
+    <!-- seções futuras -->
+    <section id="como-funciona" class="container section">
+      <h2>Como funciona</h2>
+      <p>Adicionamos aqui o passo-a-passo quando estruturarmos o conteúdo real.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer container">
+    <small>© Bidly 2025</small>
+  </footer>
+
+  <script defer src="assets/js/app.js"></script>
 </body>
 </html>
