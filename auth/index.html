@@ -48,21 +48,19 @@
         <button id="btnSendLink" class="btn" style="margin-top: 8px">
           Enviar link
         </button>
-        <p class="muted" style="margin-top: 8px">
-          O link abrirá esta página (<code>/auth/index.html</code>).
-        </p>
-      </div>
+       </div>
 
       <p id="authMsg" class="muted" style="margin-top: 12px"></p>
       <p class="muted" style="margin-top: 8px">
-        <a href="../index.html">Voltar ao login</a>
+        <!-- no bloco "Definir nova senha" -->
+      <a href="../index.html" data-back-login style="display:none">Voltar ao login</a>
       </p>
     </div>
 
     <!-- libs e client (ordem importa) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
     <script src="../assets/js/supa.js?v=fix1"></script>
-
+    <script src="../assets/js/auth.reset.js" defer></script>
     <script>
       const $ = (id) => document.getElementById(id);
       const setMsg = (type, text) => {
