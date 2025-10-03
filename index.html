@@ -1,1 +1,278 @@
-<!doctype html><html><head><meta charset='utf-8'><title>placeholder</title></head><body></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bidly • Login</title>
+
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="/assets/css/base.css" />
+
+    <!-- Fallback de segurança: garante que tudo com .hide fique invisível
+         mesmo se o CSS principal atrasar/for cacheado -->
+    <style>
+      .hide {
+        display: none !important;
+      }
+    </style>
+
+    <!-- Fontes (opcional) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400..900&family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body class="wrap has-topbar">
+    <!-- ====================== TOPBAR FIXA ====================== -->
+    <header class="topbar">
+      <div class="container">
+        <!-- Marca -->
+        <a class="brand" href="/index.html" aria-label="Bidly">
+          <span class="logo"></span>
+          <span>Bidly</span>
+        </a>
+
+        <!-- Navegação (mesma página) -->
+        <nav class="nav-desktop" aria-label="Principal">
+          <a href="#beneficios">Benefícios</a>
+          <a href="#como-funciona">Como funciona</a>
+          <a href="#precos">Preços</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <!-- AÇÕES (mostra só quando logado) -->
+        <div class="actions">
+          <span class="muted hide" data-auth
+            >Logado como: <b id="userEmail">—</b></span
+          >
+          <a href="/app/" id="btnGoApp" class="btn hide" data-auth
+            >Ir para app</a
+          >
+          <button id="btnOutTop" class="btn ghost hide" data-auth>Sair</button>
+
+          <!-- hamburger -->
+          <button
+            class="menu-toggle"
+            aria-expanded="false"
+            aria-label="Abrir menu"
+          >
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Menu móvel -->
+      <div class="mobile-menu" aria-hidden="true">
+        <nav aria-label="Menu móvel">
+          <a href="#beneficios" class="mm-link">Benefícios</a>
+          <a href="#como-funciona" class="mm-link">Como funciona</a>
+          <a href="#precos" class="mm-link">Preços</a>
+          <a href="#faq" class="mm-link">FAQ</a>
+        </nav>
+      </div>
+    </header>
+    <!-- ==================== /TOPBAR FIXA ==================== -->
+
+    <!-- Headline -->
+    <h1><span class="badge">🔐</span> Bidly</h1>
+
+    <!-- DESKTOP -->
+    <p class="tagline tagline--desktop">
+      <span class="tagline-hero"
+        >Conecta Empresas com Hunters e Recrutadores.</span
+      >
+      <span class="tagline-sub">
+        Empresa define o Perfil | Hunters e Recrutadores | Candidato Ideal.<br />
+        Agilidade, Menor Custo e Transparência.
+      </span>
+    </p>
+
+    <!-- MOBILE -->
+    <p class="tagline tagline--mobile">
+      <span class="tagline-hero"
+        >Conecta empresas com Headhunters e Recrutadores.</span
+      >
+      <span class="tagline-sub">
+        Empresa define o Perfil | Hunters e Recrutadores | Candidato Ideal.<br />
+        Agilidade, Menor Custo e Transparência.
+      </span>
+    </p>
+
+    <!-- Card de login (agora marcado para podermos ocultar quando logado) -->
+    <div class="row" style="gap: 8px; flex-wrap: wrap">
+      <div class="card card-pad" data-login-card>
+        <div class="row" style="gap: 8px; flex-wrap: wrap">
+          <input id="email" type="email" placeholder="Seu e-mail" />
+          <input id="password" type="password" placeholder="Sua senha" />
+          <button id="btnSignIn" class="btn">Entrar</button>
+          <button id="btnSignUp" class="btn outline">Criar conta</button>
+        </div>
+
+        <div
+          class="row"
+          style="justify-content: space-between; margin-top: 12px"
+        >
+          <a id="lnkForgot" href="#" class="muted">Esqueci minha senha</a>
+          <a id="lnkResend" href="#" class="muted"
+            >Reenviar e-mail de confirmação</a
+          >
+        </div>
+
+        <small
+          id="authMsg"
+          class="muted"
+          style="display: block; margin-top: 8px"
+        ></small>
+      </div>
+    </div>
+
+    <!-- CTA mostrado SOMENTE quando já estiver logado -->
+    <p
+      id="ctaContinue"
+      class="hide"
+      style="text-align: center; margin-top: 12px"
+    >
+      <a class="btn" href="/app/">Continuar na app</a>
+    </p>
+
+    <!-- ============================ SCRIPTS (ORDEM IMPORTA) ============================ -->
+    <!-- 1) Supabase UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+
+    <!-- 2) Núcleo unificado (connectSupabase/requireAuth/applyAuthUI/logoutLocal) -->
+    <script src="/assets/js/supa.js?v=1"></script>
+
+    <!-- 3) Lógica do formulário -->
+    <script src="/assets/js/auth.js?v=1"></script>
+
+    <!-- Remove badge do CodeSandbox -->
+    <script>
+      const hideCSBBadge = () => {
+        document
+          .querySelectorAll(
+            '#sb__open-sandbox, .csb-portal, iframe[title="Open Sandbox"], button[aria-label="Open Sandbox"], [data-csb-overlay]'
+          )
+          .forEach((el) => el.remove());
+      };
+      hideCSBBadge();
+      new MutationObserver(hideCSBBadge).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    </script>
+
+    <!-- Sombra na topbar ao rolar -->
+    <script>
+      (function () {
+        const topbar = document.querySelector(".topbar");
+        if (!topbar) return;
+        const onScroll = () =>
+          topbar.classList.toggle("is-scrolled", window.scrollY > 4);
+        onScroll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+      })();
+    </script>
+
+    <!-- Menu móvel -->
+    <script>
+      (function () {
+        const btn = document.querySelector(".menu-toggle");
+        const mobile = document.querySelector(".mobile-menu");
+        if (!btn || !mobile) return;
+
+        const open = () => {
+          document.body.classList.add("menu-open");
+          btn.classList.add("is-open");
+          btn.setAttribute("aria-expanded", "true");
+          mobile.setAttribute("aria-hidden", "false");
+        };
+        const close = () => {
+          document.body.classList.remove("menu-open");
+          btn.classList.remove("is-open");
+          btn.setAttribute("aria-expanded", "false");
+          mobile.setAttribute("aria-hidden", "true");
+        };
+        const toggle = () =>
+          document.body.classList.contains("menu-open") ? close() : open();
+
+        btn.addEventListener("click", toggle);
+        mobile.addEventListener("click", (e) => {
+          if (e.target.classList.contains("mm-link")) close();
+        });
+        window.addEventListener("keyup", (e) => {
+          if (e.key === "Escape") close();
+        });
+        window.addEventListener("resize", () => {
+          if (window.innerWidth > 900) close();
+        });
+      })();
+    </script>
+
+    <!-- Boot + UX reativa -->
+    <!-- Boot + UX reativa (sem abrir nova aba; sem auto-redirect) -->
+    <script>
+      (async () => {
+        try {
+          // 1) Conecta Supabase e aplica UI base ([data-auth]/[data-guest])
+          await connectSupabase();
+          await applyAuthUI();
+
+          // 2) Seletores locais (existindo ou não, não quebram)
+          const marketingLinks = Array.from(
+            document.querySelectorAll(".nav-desktop a, .mobile-menu .mm-link")
+          );
+          const loginCard = document.querySelector("[data-login-card]"); // se existir
+          const cta = document.getElementById("ctaContinue"); // se existir
+
+          // 3) Atualiza comportamento conforme sessão
+          const updateUX = (session) => {
+            const logged = !!session;
+
+            // (a) GARANTIA: links SEMPRE na MESMA aba (remove qualquer target rel herdado)
+            marketingLinks.forEach((a) => {
+              a.removeAttribute("target");
+              a.removeAttribute("rel");
+            });
+
+            // (b) Se você usa o card de login + CTA "Continuar na app"
+            if (loginCard) loginCard.classList.toggle("hide", logged);
+            if (cta) cta.classList.toggle("hide", !logged);
+          };
+
+          // 4) Estado inicial
+          const { data } = await sb.auth.getSession();
+          updateUX(data?.session || null);
+
+          // 5) Mudanças de sessão (login/logout)
+          sb.auth.onAuthStateChange?.((_e, session) =>
+            updateUX(session || null)
+          );
+
+          // 6) Sair (topo)
+          const doLogout = async () => {
+            try {
+              await logoutLocal();
+            } catch {}
+            location.href = "/index.html";
+          };
+          document
+            .getElementById("btnOutTop")
+            ?.addEventListener("click", doLogout);
+
+          // 7) (Opcional) Ação do CTA "Continuar na app", se você tiver um botão com id="ctaContinue"
+          cta?.addEventListener("click", (e) => {
+            e.preventDefault();
+            location.href = "/app/";
+          });
+        } catch (e) {
+          console.error("[index boot]", e);
+        }
+      })();
+    </script>
+
+    <!-- ========================== /SCRIPTS ========================== -->
+  </body>
+</html>

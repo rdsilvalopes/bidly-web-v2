@@ -1,1 +1,171 @@
-<!doctype html><html><head><meta charset='utf-8'><title>app</title></head><body></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bidly — App</title>
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="/assets/css/base.css" />
+    <link rel="stylesheet" href="/assets/css/app.css" />
+    <style>
+      /* fallback para debug: garantir que .hide exista */
+      .hide {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body class="wrap has-topbar">
+    <!-- ====================== TOPBAR (mostra apenas estado logado) ====================== -->
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="/index.html" aria-label="Bidly">
+          <span class="logo"></span><span>Bidly</span>
+        </a>
+
+        <nav class="nav-desktop" aria-label="Principal">
+          <a href="/index.html#beneficios">Benefícios</a>
+          <a href="/index.html#como-funciona">Como funciona</a>
+          <a href="/index.html#precos">Preços</a>
+          <a href="/index.html#faq">FAQ</a>
+        </nav>
+
+        <div class="actions">
+          <!-- Aparece só quando logado -->
+          <span class="muted hide" data-auth>
+            Logado como: <b id="userEmail">—</b>
+          </span>
+          <button id="btnOutTop" class="btn hide" data-auth>Sair</button>
+
+          <!-- Hamburger (menu móvel) -->
+          <button
+            class="menu-toggle"
+            aria-expanded="false"
+            aria-label="Abrir menu"
+          >
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Menu móvel -->
+      <div class="mobile-menu" aria-hidden="true">
+        <nav aria-label="Menu móvel">
+          <a href="/index.html#beneficios" class="mm-link">Benefícios</a>
+          <a href="/index.html#como-funciona" class="mm-link">Como funciona</a>
+          <a href="/index.html#precos" class="mm-link">Preços</a>
+          <a href="/index.html#faq" class="mm-link">FAQ</a>
+
+          <!-- Ações de autenticado (aparecem após applyAuthUI/requireAuth) -->
+          <div class="mm-actions hide" data-auth>
+            <button id="btnOutMobile" class="btn ghost mm-btn">Sair</button>
+          </div>
+        </nav>
+      </div>
+    </header>
+    <!-- ==================== /TOPBAR ==================== -->
+
+    <!-- Conteúdo da aplicação -->
+    <section class="card card-pad" style="max-width: 980px; margin: 24px auto">
+      <p>Login funcionando ✅. Aqui é a página da aplicação.</p>
+    </section>
+
+    <!-- (Opcional) área para exibir erro de boot caso algo dê errado -->
+    <section
+      id="bootError"
+      class="card card-pad hide"
+      style="max-width: 980px; margin: 16px auto"
+    ></section>
+
+    <!-- ============================ SCRIPTS (ORDEM IMPORTA) ============================ -->
+    <!-- 1) UMD do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+
+    <!-- 2) Núcleo unificado (connectSupabase/requireAuth/applyAuthUI/logoutLocal) -->
+    <script src="/assets/js/supa.js?v=1"></script>
+
+    <!-- 3) Boot da página privada -->
+    <script>
+      (async () => {
+        const showBootError = (msg) => {
+          const box = document.getElementById("bootError");
+          if (!box) return;
+          box.innerHTML = `<b>Erro ao inicializar a app:</b><br><small>${msg}</small>`;
+          box.classList.remove("hide");
+        };
+
+        try {
+          // Garante sessão (se não tiver, redireciona p/ /index.html)
+          const session = await requireAuth();
+
+          // Alterna UI (mostra [data-auth], preenche #userEmail)
+          await applyAuthUI();
+
+          // Handlers de sair
+          const doLogout = async () => {
+            try {
+              await logoutLocal();
+            } catch {}
+            location.href = "/index.html";
+          };
+          document
+            .getElementById("btnOutTop")
+            ?.addEventListener("click", doLogout);
+          document
+            .getElementById("btnOutMobile")
+            ?.addEventListener("click", doLogout);
+        } catch (e) {
+          console.error(e);
+          showBootError(e?.message || "Falha inesperada.");
+        }
+      })();
+    </script>
+
+    <!-- 4) Menu móvel -->
+    <script>
+      (function () {
+        const btn = document.querySelector(".menu-toggle");
+        const mobile = document.querySelector(".mobile-menu");
+        if (!btn || !mobile) return;
+
+        const open = () => {
+          document.body.classList.add("menu-open");
+          btn.classList.add("is-open");
+          btn.setAttribute("aria-expanded", "true");
+          mobile.setAttribute("aria-hidden", "false");
+        };
+        const close = () => {
+          document.body.classList.remove("menu-open");
+          btn.classList.remove("is-open");
+          btn.setAttribute("aria-expanded", "false");
+          mobile.setAttribute("aria-hidden", "true");
+        };
+        const toggle = () =>
+          document.body.classList.contains("menu-open") ? close() : open();
+
+        btn.addEventListener("click", toggle);
+        mobile.addEventListener("click", (e) => {
+          if (e.target.classList.contains("mm-link")) close();
+        });
+        window.addEventListener("keyup", (e) => {
+          if (e.key === "Escape") close();
+        });
+        window.addEventListener("resize", () => {
+          if (window.innerWidth > 900) close();
+        });
+      })();
+    </script>
+
+    <!-- 5) (Opcional) sombra sutil na topbar -->
+    <script>
+      (function () {
+        const topbar = document.querySelector(".topbar");
+        if (!topbar) return;
+        const onScroll = () =>
+          topbar.classList.toggle("is-scrolled", window.scrollY > 4);
+        onScroll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+      })();
+    </script>
+    <!-- ========================== /SCRIPTS ========================== -->
+  </body>
+</html>
