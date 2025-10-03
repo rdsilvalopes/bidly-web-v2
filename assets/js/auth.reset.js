@@ -1,50 +1,71 @@
-// /assets/js/auth.reset.js
-window.$ = window.$ || ((id) => document.getElementById(id));
+// assets/js/auth.reset.js
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const form = $('#reset-form') || document.querySelector('form');
+  const pwd  = $('#new-password') || document.querySelector('input[type="password"]');
+  const back = $('#back-to-login');
+  const feedback = $('.feedback') || $('#feedback');
 
-function setMsg(type, text) {
-  const el = $("resetMsg");
-  if (!el) return;
-  el.className = type; // "ok" | "error" | ""
-  el.textContent = text || "";
-}
+  const show = (el) => el && (el.style.display = '');
+  const hide = (el) => el && (el.style.display = 'none');
+  const setMsg = (msg) => { if (feedback) feedback.textContent = msg || ''; };
 
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await connectSupabase(); // usa detectSessionInUrl: true
+  // Lê parâmetros do hash (?type=recovery&code=...)
+  const hash = window.location.hash.replace(/^#/, '');
+  const hp = new URLSearchParams(hash);
+  const type = hp.get('type');
+  const code = hp.get('code') || hp.get('token_hash');
 
-    // Ao chegar por link de recuperação, o Supabase cria sessão a partir do hash
-    const {
-      data: { session },
-    } = await sb.auth.getSession();
-    if (!session) {
-      setMsg(
-        "error",
-        "Link inválido ou expirado. Solicite novamente em 'Esqueci minha senha'."
-      );
+  async function prepareForm() {
+    show(form);
+    hide(back);
+    setMsg('');
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPwd = (pwd?.value || '').trim();
+
+      if (!newPwd || newPwd.length < 8) {
+        setMsg('Use pelo menos 8 caracteres.');
+        return;
+      }
+
+      const { error } = await supa.auth.updateUser({ password: newPwd });
+      if (error) {
+        setMsg(error.message || 'Não foi possível salvar a nova senha.');
+        return;
+      }
+
+      // Mensagem rápida e volta pra home sem manter sessão
+      setMsg('Senha atualizada. Redirecionando…');
+      await supa.auth.signOut();
+      window.location.href = '/';
+    }, { once: true });
+  }
+
+  function showExpired() {
+    hide(form);
+    show(back);
+    setMsg('Link inválido ou expirado. Gere um novo link abaixo.');
+  }
+
+  async function init() {
+    // Se não for link de recuperação válido, já mostra fluxo de expiração
+    if (type !== 'recovery' || !code) {
+      showExpired();
       return;
     }
 
-    const inp = $("newPassword");
-    const btn = $("btnSaveNewPass");
+    try {
+      // Troca o code pelo cookie de sessão do Supabase para permitir trocar a senha
+      const { error } = await supa.auth.exchangeCodeForSession(window.location.hash);
+      if (error) throw error;
 
-    btn?.addEventListener("click", async () => {
-      setMsg("", "");
-      const pw = inp?.value || "";
-      if (pw.length < 8) {
-        return setMsg("error", "A senha deve ter pelo menos 8 caracteres.");
-      }
-      const { error } = await sb.auth.updateUser({ password: pw });
-      if (error) {
-        return setMsg(
-          "error",
-          error.message || "Não foi possível atualizar a senha."
-        );
-      }
-      setMsg("ok", "Senha alterada! Redirecionando para o login…");
-      setTimeout(() => (window.location.href = "/index.html"), 1000);
-    });
-  } catch (e) {
-    console.error(e);
-    setMsg("error", "Erro ao processar o link de recuperação.");
+      await prepareForm();
+    } catch (err) {
+      showExpired();
+    }
   }
-});
+
+  init();
+})();
