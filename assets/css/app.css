@@ -15,3 +15,125 @@ h3 {
   white-space: pre-wrap;
   margin: 8px 0 0;
 }
+/* === Auth layout (card centralizado) === */
+.auth-shell {
+  min-height: calc(100vh - 80px); /* cabeçalho já ocupa espaço */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;            /* largura consistente */
+  background: rgba(16, 24, 40, 0.6);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  backdrop-filter: blur(6px);
+}
+
+/* Tipografia e espaçamentos do card */
+.auth-card h1, .auth-card h2, .auth-card .title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.auth-card p {
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+/* Inputs e botões alinhados */
+.auth-card input[type="email"],
+.auth-card input[type="password"],
+.auth-card input[type="text"] {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06);
+  color: #e8eefc;
+  padding: 0 12px;
+  outline: none;
+}
+
+.auth-card button[type="submit"],
+.auth-card .btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: none;
+  background: #55b8ff;       /* seu primário */
+  color: #0c1b2a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-card .row {
+  display: grid;
+  grid-template-columns: 1fr auto; /* input + botão lado a lado */
+  gap: 12px;
+  align-items: center;
+  margin: 10px 0 6px;
+}
+
+/* Mensagens */
+#resetMsg, .auth-msg {
+  margin-top: 10px;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border-left: 4px solid transparent;
+  background: rgba(255,255,255,0.04);
+}
+#resetMsg.ok, .auth-msg.ok   { border-left-color: #36d399; color: #bff5df; }
+#resetMsg.error, .auth-msg.error { border-left-color: #ff6b6b; color: #ffd1d1; }
+
+/* Links auxiliares */
+.auth-card a {
+  color: #b7d8ff;
+  text-decoration: none;
+}
+.auth-card a:hover { text-decoration: underline; }
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .auth-card { max-width: 92vw; padding: 16px; }
+  .auth-card .row { grid-template-columns: 1fr; }
+}
+/* === AUTH LAYOUT (alias para classes existentes) === */
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: rgba(13, 19, 33, 0.72);
+  backdrop-filter: saturate(120%) blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+}
+
+/* Alinhar input + botão na mesma linha */
+.row {
+  display: flex;
+  gap: 12px;
+}
+.row > input {
+  flex: 1 1 auto;
+}
+/* Espaço entre o texto e o primeiro campo nos painéis de auth */
+#panelReset p,
+#panelRequest p {
+  margin-bottom: 12px;   /* ajuste fino: pode aumentar para 14–16px se quiser */
+}
