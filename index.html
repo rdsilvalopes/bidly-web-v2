@@ -8,15 +8,39 @@
     <!-- CSS principal -->
     <link rel="stylesheet" href="/assets/css/base.css" />
 
-    <!-- Fallback de segurança: garante que tudo com .hide fique invisível
-         mesmo se o CSS principal atrasar/for cacheado -->
+    <!-- Gradiente headline -->
     <style>
-      .hide {
-        display: none !important;
+      .tagline-hero .txt-gradient { text-shadow: none !important; }
+      .tagline .txt-gradient,
+      .tagline-hero .txt-gradient,
+      .txt-gradient{
+        background-image: linear-gradient(90deg, #8bd0ff 0%, #74a9ff 52%, #b69cff 100%) !important;
+        background-repeat: no-repeat !important;
+        background-size: 100% 100% !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        color: transparent !important;
+        display: inline-block !important;
+        position: relative !important;
+        z-index: 1 !important;
       }
     </style>
 
-    <!-- Fontes (opcional) -->
+    <!-- Fallback de segurança -->
+    <style>
+      .hide { display: none !important; }
+    </style>
+
+    <!-- PRÉ-AUTH: oculta o que pisca antes da sessão ser resolvida -->
+    <style>
+      /* enquanto o body tiver .auth-boot, escondemos tudo que pode “piscar” */
+      body.auth-boot [data-login-card] { display: none !important; }
+      body.auth-boot [data-auth]       { visibility: hidden !important; }
+      body.auth-boot #ctaContinue      { display: none !important; }
+    </style>
+
+    <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,7 +49,8 @@
     />
   </head>
 
-  <body class="wrap has-topbar">
+  <!-- >>> ADICIONAMOS auth-boot para impedir flash de login <<< -->
+  <body class="wrap has-topbar auth-boot">
     <!-- ====================== TOPBAR FIXA ====================== -->
     <header class="topbar">
       <div class="container">
@@ -45,12 +70,10 @@
 
         <!-- AÇÕES (mostra só quando logado) -->
         <div class="actions">
-          <span class="muted hide" data-auth
-            >Logado como: <b id="userEmail">—</b></span
-          >
-          <a href="/app/" id="btnGoApp" class="btn hide" data-auth
-            >Ir para app</a
-          >
+          <span class="muted hide" data-auth>
+            Logado como: <b id="userEmail">—</b>
+          </span>
+          <a href="/app/" id="btnGoApp" class="btn hide" data-auth>Ir para app</a>
           <button id="btnOutTop" class="btn ghost hide" data-auth>Sair</button>
 
           <!-- hamburger -->
@@ -81,9 +104,9 @@
 
     <!-- DESKTOP -->
     <p class="tagline tagline--desktop">
-      <span class="tagline-hero"
-        >Conecta Empresas com Hunters e Recrutadores.</span
-      >
+      <span class="tagline-hero">
+        Conecta Empresas com <span class="txt-gradient">Hunters e Recrutadores</span>.
+      </span>
       <span class="tagline-sub">
         Empresa define o Perfil | Hunters e Recrutadores | Candidato Ideal.<br />
         Agilidade, Menor Custo e Transparência.
@@ -92,49 +115,49 @@
 
     <!-- MOBILE -->
     <p class="tagline tagline--mobile">
-      <span class="tagline-hero"
-        >Conecta empresas com Headhunters e Recrutadores.</span
-      >
+      <span class="tagline-hero">
+        Conecta empresas com <span class="txt-gradient">Headhunters e Recrutadores</span>.
+      </span>
       <span class="tagline-sub">
         Empresa define o Perfil | Hunters e Recrutadores | Candidato Ideal.<br />
         Agilidade, Menor Custo e Transparência.
       </span>
     </p>
 
-    <!-- Card de login (agora marcado para podermos ocultar quando logado) -->
-    <div class="row" style="gap: 8px; flex-wrap: wrap">
-      <div class="card card-pad" data-login-card>
-        <div class="row" style="gap: 8px; flex-wrap: wrap">
+    <!-- ===== Card de login (isolado) ===== -->
+    <div id="loginWrap">
+      <div class="card login-card" data-login-card>
+        <!-- ...aqui dentro ficam as portas e os campos... -->
+        <div class="role-portas">
+          <button class="btn outline" data-role="company" id="btnRoleCompany" aria-pressed="false">Sou Empresa</button>
+          <button class="btn outline" data-role="vendor"  id="btnRoleVendor"  aria-pressed="false">Sou Fornecedor</button>
+        </div>
+
+        <input type="hidden" id="role" value="">
+
+        <div class="form-field">
           <input id="email" type="email" placeholder="Seu e-mail" />
+        </div>
+        <div class="form-field">
           <input id="password" type="password" placeholder="Sua senha" />
+        </div>
+
+        <div class="form-actions">
           <button id="btnSignIn" class="btn">Entrar</button>
-          <button id="btnSignUp" class="btn outline">Criar conta</button>
+          <button id="btnSignUp" class="btn outline" disabled aria-disabled="true">Criar conta</button>
         </div>
 
-        <div
-          class="row"
-          style="justify-content: space-between; margin-top: 12px"
-        >
-          <a id="lnkForgot" href="#" class="muted">Esqueci minha senha</a>
-          <a id="lnkResend" href="#" class="muted"
-            >Reenviar e-mail de confirmação</a
-          >
+        <div class="form-links">
+          <a id="lnkForgot"  href="#" class="muted">Esqueci minha senha</a>
+          <a id="lnkResend" href="#" class="muted">Reenviar e-mail de confirmação</a>
         </div>
 
-        <small
-          id="authMsg"
-          class="muted"
-          style="display: block; margin-top: 8px"
-        ></small>
+        <small id="authMsg" class="muted"></small>
       </div>
     </div>
 
     <!-- CTA mostrado SOMENTE quando já estiver logado -->
-    <p
-      id="ctaContinue"
-      class="hide"
-      style="text-align: center; margin-top: 12px"
-    >
+    <p id="ctaContinue" class="hide" style="text-align: center; margin-top: 12px">
       <a class="btn" href="/app/">Continuar na app</a>
     </p>
 
@@ -142,7 +165,7 @@
     <!-- 1) Supabase UMD -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
 
-    <!-- 2) Núcleo unificado (connectSupabase/requireAuth/applyAuthUI/logoutLocal) -->
+    <!-- 2) Núcleo unificado -->
     <script src="/assets/js/supa.js?v=1"></script>
 
     <!-- 3) Lógica do formulário -->
@@ -211,68 +234,172 @@
       })();
     </script>
 
-    <!-- Boot + UX reativa -->
     <!-- Boot + UX reativa (sem abrir nova aba; sem auto-redirect) -->
     <script>
       (async () => {
         try {
-          // 1) Conecta Supabase e aplica UI base ([data-auth]/[data-guest])
+          // 1) Conecta + aplica UI base
           await connectSupabase();
           await applyAuthUI();
 
-          // 2) Seletores locais (existindo ou não, não quebram)
+          // 2) Seletores locais
           const marketingLinks = Array.from(
             document.querySelectorAll(".nav-desktop a, .mobile-menu .mm-link")
           );
-          const loginCard = document.querySelector("[data-login-card]"); // se existir
-          const cta = document.getElementById("ctaContinue"); // se existir
+          const loginCard = document.querySelector("[data-login-card]");
+          const cta = document.getElementById("ctaContinue");
+          const brand = document.querySelector(".brand");
 
-          // 3) Atualiza comportamento conforme sessão
+          // 3) Estado global
+          let isLogged = false;
+
+          // 4) Atualiza comportamento conforme sessão
           const updateUX = (session) => {
-            const logged = !!session;
+            isLogged = !!session;
 
-            // (a) GARANTIA: links SEMPRE na MESMA aba (remove qualquer target rel herdado)
+            // links SEMPRE mesma aba
             marketingLinks.forEach((a) => {
               a.removeAttribute("target");
               a.removeAttribute("rel");
             });
 
-            // (b) Se você usa o card de login + CTA "Continuar na app"
-            if (loginCard) loginCard.classList.toggle("hide", logged);
-            if (cta) cta.classList.toggle("hide", !logged);
+            if (loginCard) loginCard.classList.toggle("hide", isLogged);
+            if (cta) cta.classList.toggle("hide", !isLogged);
+
+            // >>>>>> ACABOU o boot: remove pré-auth (elimina “flash de login”)
+            document.body.classList.remove("auth-boot");
           };
 
-          // 4) Estado inicial
+          // 5) Estado inicial
           const { data } = await sb.auth.getSession();
           updateUX(data?.session || null);
 
-          // 5) Mudanças de sessão (login/logout)
-          sb.auth.onAuthStateChange?.((_e, session) =>
-            updateUX(session || null)
-          );
+          // 6) Mudanças de sessão
+          sb.auth.onAuthStateChange?.((_e, session) => updateUX(session || null));
 
-          // 6) Sair (topo)
+          // 7) Sair (topo)
           const doLogout = async () => {
-            try {
-              await logoutLocal();
-            } catch {}
+            try { await logoutLocal(); } catch {}
             location.href = "/index.html";
           };
-          document
-            .getElementById("btnOutTop")
-            ?.addEventListener("click", doLogout);
+          document.getElementById("btnOutTop")?.addEventListener("click", doLogout);
 
-          // 7) (Opcional) Ação do CTA "Continuar na app", se você tiver um botão com id="ctaContinue"
+          // 8) Clique no logo (persistência de sessão na navegação)
+          brand?.addEventListener("click", (e) => {
+            if (isLogged) { e.preventDefault(); location.href = "/app/"; }
+          });
+
+          // 9) CTA "Continuar na app"
           cta?.addEventListener("click", (e) => {
             e.preventDefault();
             location.href = "/app/";
           });
+
         } catch (e) {
           console.error("[index boot]", e);
+          // Libera layout mesmo em erro pra não travar a página
+          document.body.classList.remove("auth-boot");
         }
       })();
     </script>
 
-    <!-- ========================== /SCRIPTS ========================== -->
+    <!-- BLOCO que cuida do estado visual do botão “Criar conta” + mensagens -->
+    <script>
+      (function () {
+        const roleBtns   = Array.from(document.querySelectorAll(".role-portas [data-role]"));
+        const btnSignUp  = document.getElementById("btnSignUp");
+        const authMsg    = document.getElementById("authMsg");
+        const roleHidden = document.getElementById("role");
+        const btnSignIn  = document.getElementById("btnSignIn");
+        if (!btnSignUp || roleBtns.length === 0) return;
+
+        const setMsg = (text, kind) => {
+          if (!authMsg) return;
+          authMsg.textContent = text || "";
+          authMsg.classList.remove("error","success");
+          if (kind) authMsg.classList.add(kind);
+        };
+
+        const validRole = r => r === "company" || r === "vendor";
+
+        const markActive = (role) => {
+          roleBtns.forEach((b) => {
+            const isActive = b.dataset.role === role;
+            b.classList.toggle("is-active", isActive);
+            b.setAttribute("aria-pressed", String(isActive)); // acessibilidade
+          });
+          if (roleHidden) roleHidden.value = role; // sincroniza o hidden #role
+        };
+
+        // >>> FIX: controlar também o atributo [disabled]
+        const setVisuallyDisabled = (flag) => {
+          const disabled = !!flag;
+          btnSignUp.classList.toggle("is-disabled", disabled);
+          btnSignUp.setAttribute("aria-disabled", disabled ? "true" : "false");
+          if (disabled) btnSignUp.setAttribute("disabled", "disabled");
+          else btnSignUp.removeAttribute("disabled");
+        };
+
+        setVisuallyDisabled(true); setMsg("");
+
+        // Pré-seleciona pela URL, se houver
+        try {
+          const urlRole = new URLSearchParams(location.search).get("expectedRole");
+          if (validRole(urlRole)) {
+            markActive(urlRole);
+            setVisuallyDisabled(false);
+            setMsg(`Criar conta como ${urlRole === "company" ? "Empresa" : "Fornecedor"}.`);
+          }
+        } catch {}
+
+        // Clique nas portas
+        roleBtns.forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            const role = btn.dataset.role;
+            if (!validRole(role)) return;
+            markActive(role);
+            setVisuallyDisabled(false);
+            setMsg(`Criar conta como ${role === "company" ? "Empresa" : "Fornecedor"}.`);
+            try { localStorage.setItem("expectedRole", role); } catch {}
+            try {
+              const url = new URL(location.href);
+              url.searchParams.set("expectedRole", role);
+              history.replaceState({}, "", url);
+            } catch {}
+          });
+        });
+
+        btnSignUp.addEventListener("click", (e) => {
+          const disabled =
+            btnSignUp.classList.contains("is-disabled") ||
+            btnSignUp.getAttribute("aria-disabled") === "true" ||
+            btnSignUp.hasAttribute("disabled");
+          if (disabled) {
+            e.preventDefault();
+            setMsg('Selecione um card: "Sou Empresa" ou "Sou Fornecedor" para criar sua conta.', "error");
+          }
+        }, true);
+
+        // Entrar → bloqueia se não houver papel definido (UX)
+        btnSignIn?.addEventListener("click", (e) => {
+          const role =
+            (document.getElementById('role')?.value) ||
+            (new URLSearchParams(location.search).get("expectedRole")) ||
+            (localStorage.getItem("expectedRole") || "");
+
+          if (role !== "company" && role !== "vendor") {
+            e.preventDefault();
+            const authMsg = document.getElementById("authMsg");
+            if (authMsg) {
+              authMsg.classList.remove("success","ok");
+              authMsg.classList.add("error");
+              authMsg.textContent = 'Selecione "Sou Empresa" ou "Sou Fornecedor" antes de entrar.';
+            }
+          }
+        }, true);
+      })();
+    </script>
+
   </body>
 </html>
