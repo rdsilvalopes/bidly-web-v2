@@ -1,136 +1,99 @@
-// /assets/js/app.js
+// /assets/js/app.js — versão estável e direta
 
-const $ = (id) => document.getElementById(id);
+(function () {
+  const $ = (id) => document.getElementById(id);
 
-function showErr(e) {
-  const msg =
-    e?.message ||
-    e?.error_description ||
-    e?.toString?.() ||
-    "Erro desconhecido";
-  alert("Erro: " + msg);
-  console.error(e);
-}
+  document.addEventListener("DOMContentLoaded", boot);
 
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await ensureAuthListeners(); // <— NOVO: registra listeners sem forçar /auth
-    await ensureAuthAndClient(); // (sua função atual que chama requireAuth)
-    await initHeader();
-    await initRoleGate();
-  } catch (e) {
-    showErr(e);
-  }
-});
-
-async function ensureAuthAndClient() {
-  await connectSupabase(); // vem do supa.js (UMD)
-  const session = await requireAuth(); // vem do guards.js
-  if (!session) throw new Error("Sem sessão.");
-  return session;
-}
-
-// --- Modal de escolha de papel ---------------------------------
-function bindRoleModalHandlers() {
-  const btnCompany = $("btnRoleCompany");
-  const btnSupplier = $("btnRoleSupplier");
-  const modalEl = $("modalChooseRole"); // <-- seu ID real
-
-  async function handleChoose(role) {
+  async function boot() {
     try {
-      const btn = role === "company" ? btnCompany : btnSupplier;
-      if (btn) btn.disabled = true;
+      // 1) Conecta Supabase e pega sessão
+      await connectSupabase(); // vem do /assets/js/supa.js (já existente)
+      const { data: s, error } = await sb.auth.getSession();
+      if (error) throw error;
 
-      await repo.getOrCreateMyProfile(); // cria linha se faltar
-      await repo.updateMyProfile({
-        role,
-        accept_terms_at: new Date().toISOString(),
+      const session = s?.session ?? null;
+      if (!session) {
+        console.warn("[app] Sem sessão -> /index.html");
+        location.href = "/index.html";
+        return;
+      }
+
+      // 2) Topo: e-mail
+      const email = session.user?.email || "—";
+      $("userEmail")?.replaceChildren(email);
+
+      // 3) Mostrar elementos gated por login
+      document.querySelectorAll("[data-auth]").forEach((el) => {
+        el.classList.remove("hide");
+        el.removeAttribute("aria-hidden");
       });
 
-      // Fecha o modal
-      if (modalEl) modalEl.style.display = "none";
-      document.body.classList.remove("modal-open");
+      // 4) Sair
+      const btnOut = $("btnOutTop") || $("btnSignOut");
+      if (btnOut) {
+        btnOut.addEventListener("click", async () => {
+          try { await sb.auth.signOut(); } catch {}
+          location.href = "/index.html";
+        });
+      }
 
-      // Segue app
-      initJobsUI();
+      // 5) Perfil
+      await paintUserRole(session);
+
+      // 6) Se sair em outra aba, volta para /index
+      sb.auth.onAuthStateChange((evt) => {
+        if (evt === "SIGNED_OUT") location.href = "/index.html";
+      });
     } catch (e) {
-      showErr(e);
-    } finally {
-      if (btnCompany) btnCompany.disabled = false;
-      if (btnSupplier) btnSupplier.disabled = false;
+      console.error("[app] boot error:", e);
+      alert(e?.message || e);
     }
   }
 
-  if (btnCompany) btnCompany.onclick = () => handleChoose("company");
-  if (btnSupplier) btnSupplier.onclick = () => handleChoose("supplier");
-}
+  async function paintUserRole(session) {
+    const out = $("userRoleText");
+    const setRoleText = (label) => { if (out) out.textContent = " • Perfil: " + label; };
 
-async function initHeader() {
-  const { data } = await sb.auth.getUser();
-  const email = data?.user?.email ?? "—";
-  const el = $("userEmail");
-  if (el) el.textContent = email;
+    try {
+      const uid = session?.user?.id;
+      if (!uid) { setRoleText("—"); return; }
 
-  const btnOut = $("btnSignOut");
-  if (btnOut) {
-    btnOut.onclick = async () => {
-      await sb.auth.signOut();
-      window.location.href = "/index.html";
-    };
+      // ---- Leitura 1: profiles.id = uid (retorna array) ----
+      let { data, error } = await sb
+        .from("profiles")
+        .select("role")
+        .eq("id", uid)
+        .limit(1);
+
+      console.log("[role] by id ->", { data, error });
+
+      // data aqui é array
+      let role = Array.isArray(data) && data.length ? data[0]?.role : null;
+
+      // ---- Leitura 2 (fallback): profiles.user_id = uid ----
+      if (!role) {
+        const r2 = await sb
+          .from("profiles")
+          .select("role")
+          .eq("user_id", uid)
+          .limit(1);
+
+        console.log("[role] by user_id ->", { data: r2.data, error: r2.error });
+        role = Array.isArray(r2.data) && r2.data.length ? r2.data[0]?.role : null;
+      }
+
+      // Normaliza rótulo
+      const isVendor = role === "vendor" || role === "supplier";
+      const label =
+        role === "company" ? "Empresa" :
+        isVendor ? "Fornecedor" : "—";
+
+      console.log("[role] uid=", uid, "role=", role, "label=", label);
+      setRoleText(label);
+    } catch (e) {
+      console.warn("[role] erro ao obter role:", e);
+      setRoleText("—");
+    }
   }
-
-  sb.auth.onAuthStateChange((evt) => {
-    if (evt === "SIGNED_OUT") window.location.href = "/index.html";
-  });
-}
-
-async function initRoleGate() {
-  const me = await repo.getOrCreateMyProfile();
-  const needsRole = !me?.role;
-  const modalEl = $("modalChooseRole"); // <-- seu ID real
-
-  if (needsRole) {
-    if (modalEl) modalEl.style.display = "flex"; // seu modal usa flex
-    document.body.classList.add("modal-open");
-    bindRoleModalHandlers();
-  } else {
-    if (modalEl) modalEl.style.display = "none";
-    document.body.classList.remove("modal-open");
-    initJobsUI();
-  }
-}
-
-// --- Jobs (placeholder) ----------------------------------------
-const jobsList = $("jobsList");
-
-async function listJobs() {
-  if (jobsList) {
-    jobsList.innerHTML = "<li>Carregamento de jobs (em breve)</li>";
-  }
-}
-
-async function createTestJob() {
-  alert("Criação de demanda de teste — placeholder");
-}
-
-function initJobsUI() {
-  const btnList = $("btnListJobs");
-  const btnCreate = $("btnCreateJob"); // <-- ID correto do seu HTML
-
-  if (btnList) btnList.onclick = listJobs;
-  if (btnCreate) btnCreate.onclick = createTestJob;
-}
-
-// --- Bootstrap --------------------------------------------------
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await connectSupabase();
-    await requireAuth();
-    await initHeader();
-    await initRoleGate();
-  } catch (e) {
-    alert(e?.message || e);
-  }
-});
-// /assets/js/app.js
-window.$ = window.$ || ((id) => document.getElementById(id));
+})();
