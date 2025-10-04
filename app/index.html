@@ -31,9 +31,11 @@
 
         <div class="actions">
           <!-- Aparece só quando logado -->
-          <span class="muted hide" data-auth>
+          <span class="muted" data-auth>
             Logado como: <b id="userEmail">—</b>
+            <span id="userRoleText"> • Perfil: —</span>
           </span>
+
           <button id="btnOutTop" class="btn hide" data-auth>Sair</button>
 
           <!-- Hamburger (menu móvel) -->
@@ -82,6 +84,8 @@
 
     <!-- 2) Núcleo unificado (connectSupabase/requireAuth/applyAuthUI/logoutLocal) -->
     <script src="/assets/js/supa.js?v=1"></script>
+
+    <script src="/assets/js/app.js?v=ROLE3"></script>
 
     <!-- 3) Boot da página privada -->
     <script>
@@ -167,5 +171,7 @@
       })();
     </script>
     <!-- ========================== /SCRIPTS ========================== -->
+
+
   </body>
 </html>

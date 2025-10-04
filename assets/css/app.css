@@ -137,3 +137,137 @@ h3 {
 #panelRequest p {
   margin-bottom: 12px;   /* ajuste fino: pode aumentar para 14–16px se quiser */
 }
+/* Card de login */
+.login-card {
+  width: 100%;
+  max-width: 400px;        /* largura fixa */
+  margin: 40px auto;       /* centralizado */
+  padding: 20px;
+  background: #111a2b;     /* mesma cor do fundo do tema */
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Grupo de tabs (Sou Empresa / Sou Fornecedor) */
+.login-card .tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.login-card .tabs button {
+  flex: 1;                 /* cada botão ocupa metade */
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  background: #1e293b;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.login-card .tabs button.active {
+  background: #3b82f6;     /* azul ativo */
+}
+
+/* Inputs */
+.login-card input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Botões de ação (Entrar / Criar conta) */
+.login-card .actions {
+  display: flex;
+  gap: 12px;
+}
+
+.login-card .actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+}
+
+.login-card .actions button:hover {
+  opacity: 0.9;
+}
+
+.login-card .actions .primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.login-card .actions .secondary {
+  background: transparent;
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+}
+
+/* Mensagem de erro */
+.login-card .error {
+  color: #f87171;
+  font-size: 13px;
+  min-height: 18px; /* reserva espaço mesmo quando vazio */
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 32px auto;
+  padding: 20px;
+  background: #111a2b;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.role-portas {
+  display: flex;
+  gap: 10px;
+}
+
+.role-portas .btn {
+  flex: 1; /* cada botão ocupa metade */
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions .btn {
+  flex: 1;
+}
+
+.links {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+#authMsg {
+  margin-top: 6px;
+  min-height: 18px;
+  font-size: 13px;
+}
+
+#authMsg.error {
+  color: #f87171;
+}
+
+#authMsg.success {
+  color: #4ade80;
+}
