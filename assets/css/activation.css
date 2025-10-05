@@ -1,5 +1,14 @@
 /* ===== Modal genérico ===== */
-.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(7,12,22,.6);z-index:50;padding:24px}
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(7,12,22,.6);
+  z-index:9999; /* ↑↑ mantêm acima do header/nav */
+  padding:24px;
+}
 .modal[aria-hidden="false"]{display:flex}
 body.modal-open{overflow:hidden}
 
@@ -39,6 +48,10 @@ body.modal-open{overflow:hidden}
   --tm-surface:#f8fafc;   /* rodapé */
   --tm-link:#1d4ed8;      /* links */
   --tm-primary:#2563eb;   /* aceitar */
+
+  /* padding do overlay com safe-area (iOS/Android) */
+  --overlay-pad-y: calc(48px + env(safe-area-inset-top));
+  padding: var(--overlay-pad-y) 24px;
 }
 
 /* Diálogo: largura, layout, cantos e overflow */
@@ -46,7 +59,8 @@ body.modal-open{overflow:hidden}
   background:var(--tm-bg); color:var(--tm-fg);
   border:1px solid var(--tm-border); border-radius:16px;
   box-shadow:0 24px 64px rgba(0,0,0,.18);
-  width:min(760px,94vw); max-height:90vh;
+  width:min(760px,94vw);
+  max-height: calc(100vh - (var(--overlay-pad-y) * 2)); /* compensa a folga do overlay */
   display:flex; flex-direction:column; overflow:hidden;
 }
 
@@ -124,4 +138,10 @@ body.modal-open{overflow:hidden}
   #termsModal .modal-dialog{box-shadow:none!important;border:none!important;width:auto!important;max-width:none!important;margin:0!important;padding:0 24px!important}
   #termsModal .terms-card{padding:0!important}
   #termsModal .terms-box{border:0!important;padding:0!important}
+}
+
+/* Ajuste extra para telas muito baixas */
+@media (max-height:680px){
+  #termsModal{ --overlay-pad-y: calc(32px + env(safe-area-inset-top)); }
+  #termsModal .modal-dialog{max-height: calc(100vh - (var(--overlay-pad-y) * 2));}
 }
