@@ -1,0 +1,23 @@
+/* === Tweaks de legibilidade da tela de ativação =================== */
+
+/* 1) Respiração do texto das descrições */
+.activation-item .desc { 
+  line-height: 1.55;
+}
+
+/* 2) Chip "Pendente" com contraste melhor */
+.activation-item .status{
+  background: #2c3240;  /* ligeiramente mais escuro que o fundo */
+  color: #ffd36e;        /* amarelo mais vivo */
+  font-weight: 700;
+}
+
+/* 3) Conforto no mobile para botões pequenos */
+@media (max-width: 640px){
+  .btn.sm { 
+    height: 44px; 
+    padding: 0 16px; 
+    font-size: 16px; 
+    width: 100%;
+  }
+}
