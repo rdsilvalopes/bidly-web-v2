@@ -7,11 +7,14 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/assets/css/base.css" />
     <link rel="stylesheet" href="/assets/css/app.css" />
+    <link rel="stylesheet" href="/assets/css/activation.css?v=1">
     <style>
+
+
       /* fallback para debug: garantir que .hide exista */
       .hide { display: none !important; }
 
-      /* ===== Modal simples para escolher papel ===== */
+      /* ===== Modal: escolher papel ===== */
       .modal {
         position: fixed; inset: 0; display: none;
         align-items: center; justify-content: center;
@@ -20,17 +23,91 @@
       }
       .modal.is-open { display: flex; }
       .modal__box {
-        background:#0e1421;
+        background:#0e1421; color:#e8eefb;
         border:1px solid rgba(255,255,255,.06);
-        border-radius:16px;
-        box-shadow: 0 10px 40px rgba(0,0,0,.5);
+        border-radius:16px; box-shadow: 0 10px 40px rgba(0,0,0,.5);
         padding: 24px; max-width:520px; width:100%;
-        color:#e8eefb;
       }
       .modal__actions { display:flex; gap:12px; margin-top:12px; }
       .modal__actions .btn { flex:1; }
       body.modal-open { overflow: hidden; }
+
+      /* ===== Checklist de ativação (UI leve, não impacta tema) ===== */
+      .activation-card { max-width:980px; margin:24px auto; }
+      .activation-card .head {
+        display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;
+      }
+      .activation-title { font:800 18px/1.3 Inter,system-ui,sans-serif; color:#e8eefb; }
+      .activation-progress { color:#cfe3ff; font-size:14px; }
+      .activation-list { list-style:none; display:grid; gap:10px; margin-top:8px; }
+      .activation-item {
+        display:flex; align-items:center; gap:12px; padding:10px 12px;
+        border:1px solid rgba(255,255,255,.08); border-radius:12px;
+        background: rgba(255,255,255,.03);
+      }
+      .activation-item .badge {
+        min-width:24px; height:24px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+        font-weight:800; background:rgba(56,189,248,.12); color:#86d5ff; font-size:13px;
+      }
+      .activation-item .info { flex:1; }
+      .activation-item .title { font-weight:700; color:#e8eefb; }
+      .activation-item .desc { color:#cfe3ff; font-size:13px; }
+      .activation-item .status {
+        font-size:12px; font-weight:700; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+      }
+      .st-ok { color:#bff5df; border-color:#2dd4bf; }
+      .st-pending { color:#ffe9b6; border-color:#fbbf24; }
+      .st-missing { color:#ffd1d1; border-color:#f87171; }
+      .btn.sm { height:34px; padding:0 12px; font-size:14px; }
+      @media (max-width:640px){ .activation-card .head{ flex-direction:column; align-items:flex-start; } }
     </style>
+
+
+<style>
+  /* === Legibilidade melhorada: ativação (tipografia + espaçamentos) === */
+  .activation-card { max-width: 980px; margin: 28px auto; }
+  .activation-card .head { gap: 14px; margin-bottom: 12px; }
+  .activation-title { font-weight: 800; font-size: 20px; line-height: 1.35; }
+  .activation-progress { font-size: 15px; }
+
+  .activation-list { gap: 12px; }
+
+  .activation-item {
+    padding: 14px 16px; border-radius: 14px;
+  }
+  .activation-item .badge {
+    min-width: 28px; height: 28px; font-size: 14px;
+  }
+  .activation-item .title {
+    font-size: 19.5px; line-height: 1.35;
+  }
+  .activation-item .desc {
+    font-size: 18.5px; line-height: 1.5; color: #d7e9ff;
+  }
+  .activation-item .status {
+    font-size: 16.5px; padding: 6px 10px; border-radius: 999px;
+  }
+
+  /* Botão compacto mais confortável (min 40px) */
+  .btn.sm { height: 40px; padding: 0 14px; font-size: 15px; }
+
+  /* Hover/focus discretos (acessibilidade) */
+  .btn.sm:focus-visible { outline: 2px solid #89c6ff; outline-offset: 2px; }
+  .activation-item .status:focus-visible { outline: 2px solid #89c6ff; outline-offset: 2px; }
+
+  /* Mobile: dá mais um passo no tamanho e nos alvos de toque */
+  @media (max-width: 640px) {
+    .activation-title { font-size: 21px; }
+    .activation-item { padding: 16px; }
+    .activation-item .title { font-size: 17px; }
+    .activation-item .desc { font-size: 15px; }
+    .activation-item .badge { min-width: 30px; height: 30px; font-size: 15px; }
+    .btn.sm { height: 44px; padding: 0 16px; font-size: 16px; }
+  }
+</style>
+
+
+
   </head>
 
   <body class="wrap has-topbar">
@@ -82,16 +159,61 @@
     <!-- ==================== /TOPBAR ==================== -->
 
     <!-- Conteúdo da aplicação -->
-    <section class="card card-pad" style="max-width: 980px; margin: 24px auto">
-      <p>Login funcionando ✅. Aqui é a página da aplicação.</p>
+    <section class="card card-pad activation-card" id="activationCard">
+      <div class="head">
+        <div class="activation-title">Ativação da conta</div>
+        <div class="activation-progress"><span id="actCount">0</span> / <span id="actTotal">4</span> concluídos</div>
+      </div>
+
+      <ul class="activation-list">
+        <!-- Dados -->
+        <li class="activation-item" id="row-dados">
+          <div class="badge">1</div>
+          <div class="info">
+            <div class="title">Dados do perfil</div>
+            <div class="desc" id="desc-dados">Complete as informações básicas para operar.</div>
+          </div>
+          <span class="status st-pending" id="st-dados">Pendente</span>
+          <button class="btn outline sm" id="btn-dados">Preencher</button>
+        </li>
+
+        <!-- Termos -->
+        <li class="activation-item" id="row-termos">
+          <div class="badge">2</div>
+          <div class="info">
+            <div class="title">Termos de uso</div>
+            <div class="desc">É necessário aceitar os termos para continuar.</div>
+          </div>
+          <span class="status st-pending" id="st-termos">Pendente</span>
+          <button class="btn outline sm" id="btn-termos">Ler & aceitar</button>
+        </li>
+
+        <!-- Financeiro -->
+        <li class="activation-item" id="row-fin">
+          <div class="badge">3</div>
+          <div class="info">
+            <div class="title">Financeiro</div>
+            <div class="desc" id="desc-fin">Configure para receber/pagar com segurança.</div>
+          </div>
+          <span class="status st-pending" id="st-fin">Pendente</span>
+          <button class="btn outline sm" id="btn-fin">Configurar</button>
+        </li>
+
+        <!-- Documentos (KYC/KYB) -->
+        <li class="activation-item" id="row-docs">
+          <div class="badge">4</div>
+          <div class="info">
+            <div class="title">Documentos</div>
+            <div class="desc">Envio e verificação de documentos (em breve).</div>
+          </div>
+          <span class="status st-pending" id="st-docs">Pendente</span>
+          <button class="btn outline sm" id="btn-docs" disabled aria-disabled="true" title="Em breve">Em breve</button>
+        </li>
+      </ul>
     </section>
 
     <!-- (Opcional) área para exibir erro de boot caso algo dê errado -->
-    <section
-      id="bootError"
-      class="card card-pad hide"
-      style="max-width: 980px; margin: 16px auto"
-    ></section>
+    <section id="bootError" class="card card-pad hide" style="max-width: 980px; margin: 16px auto"></section>
 
     <!-- ===== Modal: escolher papel (aparece só se faltar role) ===== -->
     <div id="modalRole" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalRoleTitle">
@@ -117,16 +239,15 @@
     <!-- 3) Lógica base (já existente no projeto) -->
     <script src="/assets/js/app.js?v=ROLE3"></script>
 
-    <!-- 4) Helpers para garantir papel (Empresa/Fornecedor) -->
+    <!-- 4) Helpers (role/modal + checklist) -->
     <script>
+      /* ====== Role: rótulo no topo ====== */
       function setRoleText(role) {
         const out = document.getElementById("userRoleText");
-        const label = role === "company"
-          ? "Empresa"
-          : (role === "vendor" || role === "supplier") ? "Fornecedor" : "—";
+        const label = role === "company" ? "Empresa" :
+          (role === "vendor" || role === "supplier") ? "Fornecedor" : "—";
         if (out) out.textContent = " • Perfil: " + label;
       }
-
       function openRoleModal() {
         document.getElementById("modalRole")?.classList.add("is-open");
         document.body.classList.add("modal-open");
@@ -135,53 +256,30 @@
         document.getElementById("modalRole")?.classList.remove("is-open");
         document.body.classList.remove("modal-open");
       }
-
-      // Garante que o usuário tenha role em public.profiles; se faltar, abre o modal e salva
       async function ensureRole() {
         const { data: s } = await sb.auth.getSession();
-        const session = s?.session;
-        if (!session) return;
-
+        const session = s?.session; if (!session) return;
         const uid = session.user.id;
-
-        // Busca a linha do perfil
-        let { data, error } = await sb
-          .from("profiles")
-          .select("id, role")
-          .eq("id", uid)
-          .maybeSingle();
-
+        let { data, error } = await sb.from("profiles").select("id, role").eq("id", uid).maybeSingle();
         if (error) console.warn("[role] select error:", error);
-
-        // Se já tiver papel, só exibe e sai
         if (data?.role) { setRoleText(data.role); return; }
-
-        // Não tem papel -> pedir escolha
         openRoleModal();
         const btnCompany = document.getElementById("btnRoleCompany");
         const btnVendor  = document.getElementById("btnRoleVendor");
-
         async function choose(role) {
           btnCompany.disabled = btnVendor.disabled = true;
           try {
             const payload = { role, accept_terms_at: new Date().toISOString() };
-
             if (!data) {
-              // cria a linha (RLS: id deve ser = auth.uid())
-              const ins = await sb
-                .from("profiles")
-                .insert({ id: uid, ...payload })
-                .select()
-                .maybeSingle();
+              const ins = await sb.from("profiles").insert({ id: uid, ...payload }).select().maybeSingle();
               if (ins.error) throw ins.error;
             } else {
-              // atualiza a linha existente
               const upd = await sb.from("profiles").update(payload).eq("id", uid);
               if (upd.error) throw upd.error;
             }
-
-            setRoleText(role);
-            closeRoleModal();
+            setRoleText(role); closeRoleModal();
+            // Após escolher papel, recarrega checklist
+            await renderActivationChecklist();
           } catch (e) {
             console.error("[role] save error:", e);
             alert("Não foi possível salvar sua escolha agora. Tente novamente.");
@@ -189,9 +287,97 @@
             btnCompany.disabled = btnVendor.disabled = false;
           }
         }
-
         btnCompany.onclick = () => choose("company");
         btnVendor.onclick  = () => choose("vendor");
+      }
+
+      /* ====== Checklist de ativação (somente leitura/MVP) ====== */
+      function setStatus(elId, state) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.classList.remove("st-ok","st-pending","st-missing");
+        if (state === "ok") el.classList.add("st-ok"), el.textContent = "Concluído";
+        else if (state === "pending") el.classList.add("st-pending"), el.textContent = "Pendente";
+        else el.classList.add("st-missing"), el.textContent = "Faltando";
+      }
+
+      async function renderActivationChecklist() {
+        const { data: s } = await sb.auth.getSession();
+        const session = s?.session; if (!session) return;
+        const uid = session.user.id;
+
+        // Busca dados essenciais do perfil (sem uploads nesta fase)
+        const { data, error } = await sb
+          .from("profiles")
+          .select("role, company_name, document, pix_key, accept_terms_at, terms_version, display_name, linkedin_url")
+          .eq("id", uid)
+          .maybeSingle();
+
+        if (error) { console.warn("[activation] select error:", error); return; }
+
+        const role = data?.role || null;
+        const isCompany = role === "company";
+        const isVendor  = role === "vendor" || role === "supplier";
+
+        // Regras de status — MVP
+        const dadosOK = isCompany
+          ? !!(data?.company_name && data?.document)
+          : !!(data?.document || (data?.display_name && data?.linkedin_url));
+
+        const termosOK = !!data?.accept_terms_at;
+
+        const finOK = isCompany
+          ? false // empresa: pendente até definirmos campos de cobrança (próximo batch)
+          : !!data?.pix_key; // fornecedor: pix_key preenchido já conta
+
+        const docsOK = false; // Upload/aprovação ainda não implementados
+
+        setStatus("st-dados",   dadosOK  ? "ok" : "pending");
+        setStatus("st-termos",  termosOK ? "ok" : "pending");
+        setStatus("st-fin",     finOK    ? "ok" : "pending");
+        setStatus("st-docs",    docsOK   ? "ok" : "pending");
+
+        // Textos condicionais
+        const descDados = document.getElementById("desc-dados");
+        if (descDados) {
+          descDados.textContent = isCompany
+            ? "Informe razão social/nome e CNPJ."
+            : "Informe seu documento ou complete nome público e LinkedIn.";
+        }
+        const descFin = document.getElementById("desc-fin");
+        if (descFin) {
+          descFin.textContent = isCompany
+            ? "Defina dados de cobrança (em breve)."
+            : "Informe sua chave Pix para receber.";
+        }
+
+        // Progresso
+        const total = 4;
+        const done = [dadosOK, termosOK, finOK, docsOK].filter(Boolean).length;
+        document.getElementById("actTotal")?.replaceChildren(String(total));
+        document.getElementById("actCount")?.replaceChildren(String(done));
+
+        // Ações (por enquanto placeholders)
+        document.getElementById("btn-dados")?.addEventListener("click", () => {
+          alert("Tela de dados do perfil (em breve).");
+        }, { once:true });
+
+        document.getElementById("btn-termos")?.addEventListener("click", async () => {
+          // MVP: aceitar termos direto (apenas para demonstração)
+          try {
+            const now = new Date().toISOString();
+            const upd = await sb.from("profiles").update({ accept_terms_at: now, terms_version: 1 }).eq("id", uid);
+            if (!upd.error) { await renderActivationChecklist(); }
+          } catch (e) { console.warn(e); }
+        }, { once:true });
+
+        document.getElementById("btn-fin")?.addEventListener("click", () => {
+          alert(isCompany ? "Configuração de cobrança (em breve)." : "Cadastro da chave Pix (em breve).");
+        }, { once:true });
+
+        document.getElementById("btn-docs")?.addEventListener("click", () => {
+          /* Em breve: upload + fila de revisão */
+        }, { once:true });
       }
     </script>
 
@@ -212,8 +398,11 @@
           // Alterna UI (mostra [data-auth], preenche #userEmail)
           await applyAuthUI();
 
-          // Garante papel (se faltar, abre modal e salva)
+          // Papel (se faltar, modal; se existir, atualiza rótulo)
           await ensureRole();
+
+          // Checklist (somente leitura no MVP)
+          await renderActivationChecklist();
 
           // Handlers de sair
           const doLogout = async () => {
