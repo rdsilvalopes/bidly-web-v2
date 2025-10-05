@@ -9,11 +9,30 @@
     <link rel="stylesheet" href="/assets/css/app.css" />
     <style>
       /* fallback para debug: garantir que .hide exista */
-      .hide {
-        display: none !important;
+      .hide { display: none !important; }
+
+      /* ===== Modal simples para escolher papel ===== */
+      .modal {
+        position: fixed; inset: 0; display: none;
+        align-items: center; justify-content: center;
+        background: rgba(7,12,22,.6);
+        z-index: 40; padding: 24px;
       }
+      .modal.is-open { display: flex; }
+      .modal__box {
+        background:#0e1421;
+        border:1px solid rgba(255,255,255,.06);
+        border-radius:16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,.5);
+        padding: 24px; max-width:520px; width:100%;
+        color:#e8eefb;
+      }
+      .modal__actions { display:flex; gap:12px; margin-top:12px; }
+      .modal__actions .btn { flex:1; }
+      body.modal-open { overflow: hidden; }
     </style>
   </head>
+
   <body class="wrap has-topbar">
     <!-- ====================== TOPBAR (mostra apenas estado logado) ====================== -->
     <header class="topbar">
@@ -39,11 +58,7 @@
           <button id="btnOutTop" class="btn hide" data-auth>Sair</button>
 
           <!-- Hamburger (menu móvel) -->
-          <button
-            class="menu-toggle"
-            aria-expanded="false"
-            aria-label="Abrir menu"
-          >
+          <button class="menu-toggle" aria-expanded="false" aria-label="Abrir menu">
             <span></span><span></span><span></span>
           </button>
         </div>
@@ -78,6 +93,20 @@
       style="max-width: 980px; margin: 16px auto"
     ></section>
 
+    <!-- ===== Modal: escolher papel (aparece só se faltar role) ===== -->
+    <div id="modalRole" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalRoleTitle">
+      <div class="modal__box">
+        <h3 id="modalRoleTitle" style="margin:0 0 8px">Como você quer usar a Bidly?</h3>
+        <p class="muted" style="margin:0 0 16px">
+          Escolha para continuar. (Você pode solicitar mudança depois com nosso suporte.)
+        </p>
+        <div class="modal__actions">
+          <button id="btnRoleCompany" class="btn">Sou Empresa</button>
+          <button id="btnRoleVendor"  class="btn outline">Sou Fornecedor</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ============================ SCRIPTS (ORDEM IMPORTA) ============================ -->
     <!-- 1) UMD do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
@@ -85,9 +114,88 @@
     <!-- 2) Núcleo unificado (connectSupabase/requireAuth/applyAuthUI/logoutLocal) -->
     <script src="/assets/js/supa.js?v=1"></script>
 
+    <!-- 3) Lógica base (já existente no projeto) -->
     <script src="/assets/js/app.js?v=ROLE3"></script>
 
-    <!-- 3) Boot da página privada -->
+    <!-- 4) Helpers para garantir papel (Empresa/Fornecedor) -->
+    <script>
+      function setRoleText(role) {
+        const out = document.getElementById("userRoleText");
+        const label = role === "company"
+          ? "Empresa"
+          : (role === "vendor" || role === "supplier") ? "Fornecedor" : "—";
+        if (out) out.textContent = " • Perfil: " + label;
+      }
+
+      function openRoleModal() {
+        document.getElementById("modalRole")?.classList.add("is-open");
+        document.body.classList.add("modal-open");
+      }
+      function closeRoleModal() {
+        document.getElementById("modalRole")?.classList.remove("is-open");
+        document.body.classList.remove("modal-open");
+      }
+
+      // Garante que o usuário tenha role em public.profiles; se faltar, abre o modal e salva
+      async function ensureRole() {
+        const { data: s } = await sb.auth.getSession();
+        const session = s?.session;
+        if (!session) return;
+
+        const uid = session.user.id;
+
+        // Busca a linha do perfil
+        let { data, error } = await sb
+          .from("profiles")
+          .select("id, role")
+          .eq("id", uid)
+          .maybeSingle();
+
+        if (error) console.warn("[role] select error:", error);
+
+        // Se já tiver papel, só exibe e sai
+        if (data?.role) { setRoleText(data.role); return; }
+
+        // Não tem papel -> pedir escolha
+        openRoleModal();
+        const btnCompany = document.getElementById("btnRoleCompany");
+        const btnVendor  = document.getElementById("btnRoleVendor");
+
+        async function choose(role) {
+          btnCompany.disabled = btnVendor.disabled = true;
+          try {
+            const payload = { role, accept_terms_at: new Date().toISOString() };
+
+            if (!data) {
+              // cria a linha (RLS: id deve ser = auth.uid())
+              const ins = await sb
+                .from("profiles")
+                .insert({ id: uid, ...payload })
+                .select()
+                .maybeSingle();
+              if (ins.error) throw ins.error;
+            } else {
+              // atualiza a linha existente
+              const upd = await sb.from("profiles").update(payload).eq("id", uid);
+              if (upd.error) throw upd.error;
+            }
+
+            setRoleText(role);
+            closeRoleModal();
+          } catch (e) {
+            console.error("[role] save error:", e);
+            alert("Não foi possível salvar sua escolha agora. Tente novamente.");
+          } finally {
+            btnCompany.disabled = btnVendor.disabled = false;
+          }
+        }
+
+        btnCompany.onclick = () => choose("company");
+        btnVendor.onclick  = () => choose("vendor");
+      }
+    </script>
+
+    <!-- 5) Boot da página privada -->
     <script>
       (async () => {
         const showBootError = (msg) => {
@@ -104,19 +212,16 @@
           // Alterna UI (mostra [data-auth], preenche #userEmail)
           await applyAuthUI();
 
+          // Garante papel (se faltar, abre modal e salva)
+          await ensureRole();
+
           // Handlers de sair
           const doLogout = async () => {
-            try {
-              await logoutLocal();
-            } catch {}
+            try { await logoutLocal(); } catch {}
             location.href = "/index.html";
           };
-          document
-            .getElementById("btnOutTop")
-            ?.addEventListener("click", doLogout);
-          document
-            .getElementById("btnOutMobile")
-            ?.addEventListener("click", doLogout);
+          document.getElementById("btnOutTop")?.addEventListener("click", doLogout);
+          document.getElementById("btnOutMobile")?.addEventListener("click", doLogout);
         } catch (e) {
           console.error(e);
           showBootError(e?.message || "Falha inesperada.");
@@ -124,7 +229,7 @@
       })();
     </script>
 
-    <!-- 4) Menu móvel -->
+    <!-- 6) Menu móvel -->
     <script>
       (function () {
         const btn = document.querySelector(".menu-toggle");
@@ -150,16 +255,12 @@
         mobile.addEventListener("click", (e) => {
           if (e.target.classList.contains("mm-link")) close();
         });
-        window.addEventListener("keyup", (e) => {
-          if (e.key === "Escape") close();
-        });
-        window.addEventListener("resize", () => {
-          if (window.innerWidth > 900) close();
-        });
+        window.addEventListener("keyup", (e) => { if (e.key === "Escape") close(); });
+        window.addEventListener("resize", () => { if (window.innerWidth > 900) close(); });
       })();
     </script>
 
-    <!-- 5) (Opcional) sombra sutil na topbar -->
+    <!-- 7) (Opcional) sombra sutil na topbar -->
     <script>
       (function () {
         const topbar = document.querySelector(".topbar");
@@ -171,7 +272,5 @@
       })();
     </script>
     <!-- ========================== /SCRIPTS ========================== -->
-
-
   </body>
 </html>
