@@ -1,12 +1,20 @@
-// /assets/js/app.js — robusto c/ auto-cura + modal claro de Organização (PJ/CPF) + escolha/lock por role
+// /assets/js/app.js — robusto c/ auto-cura + modal claro Organização (PJ/CPF) + escolha/lock por role
 (function () {
   const $ = (id) => document.getElementById(id);
 
   document.addEventListener("DOMContentLoaded", boot);
 
-  // ---------- Utils simples ----------
-  function show(el) { el?.classList.remove("hide"); el?.setAttribute?.("aria-hidden", "false"); }
-  function hide(el) { el?.classList.add("hide"); el?.setAttribute?.("aria-hidden", "true"); }
+  // ---------- Utils ----------
+  function show(el) { if (el) { el.classList.remove("hide"); if (el.setAttribute) el.setAttribute("aria-hidden", "false"); } }
+  function hide(el) { if (el) { el.classList.add("hide");  if (el.setAttribute) el.setAttribute("aria-hidden", "true"); } }
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function onlyDigits(s) { return String(s || "").replace(/\D+/g, ""); }
 
   // ---------- Logout hard ----------
   async function hardSignOut({ redirect = true } = {}) {
@@ -123,7 +131,7 @@
         const uid = session?.user?.id;
         if (!uid) return;
         btnCompany.disabled = true;
-        btnVendor.disabled = true;
+        btnVendor.disabled  = true;
 
         const { error } = await sb.from("profiles").update({ role }).eq("id", uid);
         if (error) throw error;
@@ -137,7 +145,7 @@
         alert("Não foi possível salvar seu perfil. Tente novamente.");
       } finally {
         btnCompany.disabled = false;
-        btnVendor.disabled = false;
+        btnVendor.disabled  = false;
       }
     };
 
@@ -186,8 +194,9 @@
       profileCache = {};
     }
 
-    // Se perfil é Empresa, trave em PJ
-    lockedType = profileCache?.role === "company" ? "PJ" : null;
+    // LOCK agressivo: se for company, ou já tiver CNPJ/razão, força PJ
+    const docDigits = onlyDigits(profileCache?.document);
+    lockedType = (profileCache?.role === "company" || docDigits.length === 14 || !!profileCache?.company_name) ? "PJ" : null;
 
     // Aplica travas de UI + marca seleção inicial
     setupOrgTypeUI();
@@ -210,29 +219,35 @@
   function setupOrgTypeUI() {
     const pj = document.querySelector('input[name="org_type"][value="PJ"]');
     const pf = document.querySelector('input[name="org_type"][value="PF"]');
-    const pfLabel = pf?.closest("label");
+    const pfLabel = pf ? pf.closest("label") : null;
 
-    // Determinar seleção inicial
+    // seleção inicial
     let initial = "PJ";
-    const docDigits = String(profileCache?.document || "").replace(/\D+/g, "");
+    const docDigits = onlyDigits(profileCache?.document);
     if (!lockedType) {
       if (docDigits.length === 11) initial = "PF";
       else if (docDigits.length === 14) initial = "PJ";
       else initial = profileCache?.role === "vendor" ? "PF" : "PJ";
     } else {
-      initial = "PJ"; // lock
+      initial = "PJ";
     }
 
     if (pj) pj.checked = initial === "PJ";
     if (pf) pf.checked = initial === "PF";
 
-    // Se travado: desabilitar PF
+    // ------ LOCK AGRESSIVO QUANDO EMPRESA ------
     if (lockedType === "PJ") {
-      if (pf) { pf.disabled = true; pf.setAttribute("aria-disabled", "true"); }
-      pfLabel?.classList.add("is-disabled");
+      if (pf) {
+        pf.checked = false;
+        pf.disabled = true;
+        pf.setAttribute("aria-disabled", "true");
+        if (pfLabel) pfLabel.style.pointerEvents = "none";
+      }
+      if (pj) pj.checked = true;
+      if (pfLabel) pfLabel.classList.add("is-disabled");
     } else {
       if (pf) { pf.disabled = false; pf.removeAttribute("aria-disabled"); }
-      pfLabel?.classList.remove("is-disabled");
+      if (pfLabel) { pfLabel.style.pointerEvents = ""; pfLabel.classList.remove("is-disabled"); }
     }
   }
 
@@ -248,13 +263,18 @@
     form?.addEventListener("change", (e) => {
       const t = e.target;
       if (t && t.name === "org_type") {
-        if (lockedType === "PJ") { setupOrgTypeUI(); return; } // impede trocar quando lock
+        // trava seleção se for Empresa
+        if (lockedType === "PJ") {
+          setupOrgTypeUI(); // restaura imediatamente para PJ
+          return;
+        }
         renderOrgFields();
+        applyReadOnlyUI();
       }
     });
 
     cancel?.addEventListener("click", (e) => { e.preventDefault(); closeOrgModal(); });
-    xClose?.addEventListener("click", (e) => { e.preventDefault(); closeOrgModal(); });
+    xClose?.addEventListener("click",  (e) => { e.preventDefault(); closeOrgModal(); });
 
     form?.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -278,7 +298,7 @@
     if (!box) return;
 
     const doc = String(profileCache?.document || "");
-    const docDigits = doc.replace(/\D+/g, "");
+    const docDigits = onlyDigits(doc);
 
     if (currentOrgType() === "PJ") {
       const company_name = profileCache?.company_name || "";
@@ -309,25 +329,62 @@
       `;
       if (hint) hint.textContent = "Fornecedor PF: aprovação automática nesta etapa.";
     }
+
+    applyReadOnlyUI();
   }
 
-  function escapeHtml(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  // Read-only conforme estado (sem depender de colunas novas)
+  function applyReadOnlyUI() {
+    const form = $("orgForm");
+    if (!form) return;
+
+    const docDigits = onlyDigits(profileCache?.document);
+    const isCompany = profileCache?.role === "company";
+    const pjSubmitted = isCompany && !!profileCache?.company_name && docDigits.length === 14;
+    const pfSubmitted = profileCache?.role === "vendor" && !!profileCache?.display_name && docDigits.length === 11;
+
+    const readOnly = pjSubmitted || pfSubmitted;
+
+    // Botões
+    const btn = $("btnOrgSubmit");
+    const btnCancel = $("btnOrgCancel");
+    if (btn) {
+      btn.textContent = readOnly ? "Fechar" : (isCompany ? "Enviar para análise" : "Salvar");
+      btn.type = readOnly ? "button" : "submit";
+      btn.onclick = readOnly ? () => closeOrgModal() : null;
+      btn.removeAttribute("disabled");
+      btn.classList.remove("is-disabled");
+    }
+    if (btnCancel) { btnCancel.removeAttribute("disabled"); btnCancel.classList.remove("is-disabled"); }
+
+    // Campos
+    const inputs = form.querySelectorAll("input, select, textarea, fieldset");
+    inputs.forEach((el) => {
+      if (el.id === "btnOrgSubmit" || el.id === "btnOrgCancel" || el.id === "orgClose") return;
+      if (readOnly) {
+        el.setAttribute("disabled", "true");
+        el.setAttribute("aria-disabled", "true");
+      } else {
+        el.removeAttribute("disabled");
+        el.removeAttribute("aria-disabled");
+      }
+    });
   }
 
   async function submitOrgData() {
-    const type = currentOrgType();
+    // Segurança extra: se lock for PJ, força PJ mesmo que algo mude no DOM
+    let type = currentOrgType();
+    if (lockedType === "PJ") type = "PJ";
+
     const btn  = $("btnOrgSubmit");
-    btn?.setAttribute("disabled", "true");
-    btn?.classList.add("is-disabled");
+    if (btn) { btn.setAttribute("disabled", "true"); btn.classList.add("is-disabled"); }
 
     try {
       const { data: s } = await sb.auth.getSession();
       const uid = s?.session?.user?.id;
       if (!uid) throw new Error("Sessão inválida.");
 
+      // Monta patch mínimo, sem depender de colunas novas
       let patch = {};
       if (type === "PJ") {
         const company_name = $("org_company_name")?.value?.trim();
@@ -338,8 +395,7 @@
           role: "company",
           company_name,
           display_name: trade_name || null,
-          document: documentId,
-          profile_review_status: "pending"
+          document: documentId
         };
       } else {
         const display_name = $("org_display_name")?.value?.trim();
@@ -350,27 +406,34 @@
           role: "vendor",
           display_name,
           document: documentId,
-          linkedin_url: linkedin_url || null,
-          profile_review_status: "approved"
+          linkedin_url: linkedin_url || null
         };
       }
 
-      const upd = await sb.from("profiles").update(patch).eq("id", uid);
+      // Tenta enviar com profile_review_status (se existir) — fallback se der erro
+      let tryPatch = { ...patch };
+      if (type === "PJ")  tryPatch.profile_review_status = "pending";
+      if (type === "PF")  tryPatch.profile_review_status = "approved";
+
+      let upd = await sb.from("profiles").update(tryPatch).eq("id", uid);
+      if (upd.error && /profile_review_status/.test(upd.error.message || "")) {
+        // coluna não existe: envia sem ela
+        upd = await sb.from("profiles").update(patch).eq("id", uid);
+      }
       if (upd.error) throw upd.error;
 
-      alert("Dados enviados para análise.");
+      alert(type === "PJ" ? "Dados enviados para análise." : "Dados salvos.");
       closeOrgModal();
 
-      // Atualiza checklist e topo
+      // Atualiza caches para próxima abertura
       try { await paintUserRole({ user: { id: uid } }); } catch {}
-      if (typeof refreshActivationStatus === "function") await refreshActivationStatus();
+      if (typeof window.renderChecklist === "function") { try { await window.renderChecklist(); } catch {} }
 
     } catch (e) {
       console.error("[org] submit error:", e);
       alert(e?.message || "Erro ao salvar.");
     } finally {
-      btn?.removeAttribute("disabled");
-      btn?.classList.remove("is-disabled");
+      if (btn) { btn.removeAttribute("disabled"); btn.classList.remove("is-disabled"); }
     }
   }
 })();

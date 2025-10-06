@@ -17,10 +17,25 @@
   let termsRawHtml = "";
   let scrolledToEnd = false;
 
+  // Aguarda Supabase estar pronto (sb.auth existir)
+  async function waitForSupabaseReady() {
+    if (window.sb?.auth) return;
+    await new Promise((resolve) => {
+      let tries = 0;
+      const it = setInterval(() => {
+        tries++;
+        if (window.sb?.auth) { clearInterval(it); resolve(); }
+        else if (tries > 120) { clearInterval(it); resolve(); } // ~6s timeout
+      }, 50);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", initActivation);
 
   async function initActivation() {
     try {
+      await waitForSupabaseReady(); // <-- garante sb disponível
+
       const { data: s } = await sb.auth.getSession();
       const session = s?.session ?? null;
       uid = session?.user?.id ?? null;
@@ -60,10 +75,10 @@
 
   // ======= Lógica de UI p/ “Dados do perfil” =======
   function computeProfileUI(p) {
-    // Campos novos
-    const status = (p?.status_profile || "").toLowerCase();          // "aprovado" | "em_analise" | "reprovado" | ""
-    const approval = (p?.org_approval_status || "").toLowerCase();   // "aguardando" | "aprovado" | "reprovado" | ""
+    const status = (p?.status_profile || "").toLowerCase();        // legado
+    const approval = (p?.org_approval_status || "").toLowerCase(); // legado
     const done = !!p?.checklist_profile_done;
+    const review = (p?.profile_review_status || "").toLowerCase(); // novo
 
     const out = {
       statusPill: { text: "Pendente", cls: "st-pending" },
@@ -71,46 +86,48 @@
       isDone: false,
     };
 
-    if (status === "aprovado" || approval === "aprovado" || done) {
+    // approved
+    if (review === "approved" || status === "aprovado" || approval === "aprovado" || done) {
       out.statusPill = { text: "Concluído", cls: "st-ok" };
-      out.button = { label: "Editar", disabled: false };
+      out.button = { label: "Ver dados", disabled: false };
       out.isDone = true;
       return out;
     }
 
-    if (status === "em_analise" || approval === "aguardando") {
+    // pending
+    if (review === "pending" || status === "em_analise" || approval === "aguardando") {
       out.statusPill = { text: "Em análise", cls: "st-pending" };
-      out.button = { label: "Ver dados", disabled: true }; // conforme alinhado
+      out.button = { label: "Ver dados", disabled: true }; // conforme combinado
       return out;
     }
 
-    if (status === "reprovado" || approval === "reprovado") {
+    // rejected
+    if (review === "rejected" || status === "reprovado" || approval === "reprovado") {
       out.statusPill = { text: "Pendente", cls: "st-pending" };
       out.button = { label: "Corrigir", disabled: false };
       return out;
     }
 
-    // fallback mantém Pendente/Preencher
-    return out;
+    return out; // fallback pendente
   }
 
   // ======= CHECKLIST (exposto globalmente) =======
   async function renderChecklist() {
     try {
-      // Garantir client/sessão
       const { data: s } = await sb.auth.getSession();
       const session = s?.session ?? null;
       uid = session?.user?.id ?? uid;
       userEmail = session?.user?.email ?? userEmail;
       if (!uid) return;
 
-      // Buscamos todos os campos que o checklist usa agora
       const { data, error } = await sb
         .from("profiles")
         .select(`
           id, role,
           status_profile, org_approval_status, checklist_profile_done,
-          accept_terms_at, terms_version
+          profile_review_status,
+          accept_terms_at, terms_version,
+          pix_key
         `)
         .eq("id", uid)
         .maybeSingle();
@@ -121,7 +138,7 @@
       }
       profile = data || {};
 
-      // 1) Dados do perfil (novo fluxo)
+      // 1) Dados do perfil
       const ui = computeProfileUI(profile);
       setStatusPill($("st-dados"), ui.statusPill.text, ui.statusPill.cls);
       const btnDados = $("btnProfile") || $("btn-dados");
@@ -130,19 +147,19 @@
         disable(btnDados, ui.button.disabled);
       }
 
-      // 2) Termos (mantém lógica antiga)
+      // 2) Termos
       const termosOK = !!profile?.accept_terms_at && Number(profile?.terms_version || 0) >= TERMS.version;
       setStatusPill($("st-termos"), termosOK ? "Concluído" : "Pendente", termosOK ? "st-ok" : "st-pending");
       disable($("btn-termos"), termosOK);
 
-      // 3) Financeiro (por enquanto continua pendente; será tratado na próxima etapa)
-      setStatusPill($("st-fin"), "Pendente", "st-pending");
+      // 3) Financeiro (MVP: pix_key como mínimo)
+      const finOK = !!profile?.pix_key;
+      setStatusPill($("st-fin"), finOK ? "Concluído" : "Pendente", finOK ? "st-ok" : "st-pending");
 
-      // 4) Documentos (em breve)
+      // 4) Documentos (placeholder)
       setStatusPill($("st-docs"), "Pendente", "st-pending");
 
-      // Contador simples (apenas dados + termos contam por enquanto)
-      const doneCount = (ui.isDone ? 1 : 0) + (termosOK ? 1 : 0);
+      const doneCount = (ui.isDone ? 1 : 0) + (termosOK ? 1 : 0) + (finOK ? 1 : 0);
       $("actTotal")?.replaceChildren("4");
       $("actCount")?.replaceChildren(String(doneCount));
     } catch (e) {
@@ -150,10 +167,11 @@
     }
   }
 
-  // Torna público (o app.js chama após salvar dados)
+  // Expor para o app.js chamar após salvar
+  window.refreshActivationStatus = renderChecklist;
   window.renderChecklist = renderChecklist;
 
-  // ======= TERMO DE USO (mantido) =======
+  // ======= TERMO DE USO =======
   function bindTermsUI() {
     const btnOpen   = $("btn-termos");
     const modal     = $("termsModal");
@@ -170,7 +188,6 @@
       await loadTermsIntoModal();
     });
 
-    // fechar por [x] ou elementos com data-close="1"
     modal.addEventListener("click", (e) => {
       const t = e.target;
       if (t instanceof HTMLElement && t.dataset.close === "1") closeModal(modal);
@@ -184,7 +201,7 @@
       try {
         await persistTermsAcceptance();
         closeModal(modal);
-        await renderChecklist(); // atualiza o item "Termos"
+        await renderChecklist(); // atualiza "Termos"
       } catch (e) {
         console.error("[activation] accept terms error:", e);
         alert("Não foi possível salvar sua aceitação. Tente novamente.");
@@ -192,10 +209,8 @@
       }
     });
 
-    // imprimir / salvar PDF (janela branca)
     btnPrint?.addEventListener("click", () => { printTermsAsPdf(); });
 
-    // ESC fecha
     window.addEventListener("keyup", (e) => { if (e.key === "Escape") closeModal(modal); });
   }
 
