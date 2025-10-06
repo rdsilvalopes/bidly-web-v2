@@ -4,7 +4,7 @@
 
   // ==== CONFIG DOS TERMOS ====
   const TERMS = {
-    version: 2,
+    version: 4,
     locale: "pt-BR",
     url: "/legal/terms/pt-BR/1/terms.html",
   };
