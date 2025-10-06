@@ -145,3 +145,58 @@ body.modal-open{overflow:hidden}
   #termsModal{ --overlay-pad-y: calc(32px + env(safe-area-inset-top)); }
   #termsModal .modal-dialog{max-height: calc(100vh - (var(--overlay-pad-y) * 2));}
 }
+
+
+/* ===== Modal "Dados da organização" (tema claro, igual aos Termos) ===== */
+#orgModal{
+  --tm-bg:#fff; --tm-fg:#111827; --tm-muted:#4b5563; --tm-border:#e5e7eb;
+  --tm-surface:#f8fafc; --tm-link:#1d4ed8; --tm-primary:#2563eb;
+  --overlay-pad-y: calc(48px + env(safe-area-inset-top));
+  padding: var(--overlay-pad-y) 24px;
+}
+#orgModal .modal-dialog{
+  background:var(--tm-bg); color:var(--tm-fg);
+  border:1px solid var(--tm-border); border-radius:16px;
+  box-shadow:0 24px 64px rgba(0,0,0,.18);
+  width:min(760px,94vw);
+  max-height: calc(100vh - (var(--overlay-pad-y) * 2));
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#orgModal .modal-header{
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; justify-content:center;
+  padding:14px 48px 14px 18px;
+  background:var(--tm-bg); border-bottom:1px solid var(--tm-border);
+  font-weight:800;
+}
+#orgModal .modal-header .icon{
+  position:absolute; top:8px; right:10px; width:36px;height:36px; line-height:36px;
+  font-size:22px; border:0;border-radius:10px;background:transparent;color:var(--tm-muted);cursor:pointer;
+}
+#orgModal .modal-header .icon:hover{background:#f3f4f6;color:var(--tm-fg)}
+
+#orgModal .org-card{flex:1; overflow:auto; padding:12px 18px 0; background:var(--tm-bg)}
+#orgModal .org-fields label{font-weight:600; display:block; margin:12px 0 6px}
+#orgModal .org-fields input, #orgModal .org-fields select{
+  width:100%; height:44px; border-radius:10px; border:1px solid var(--tm-border);
+  background:#fff; color:#111827; padding:0 12px; outline:none;
+}
+#orgModal .org-fields .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (max-width:640px){ #orgModal .org-fields .row{grid-template-columns:1fr} }
+
+#orgModal .org-type{display:flex; gap:10px; margin:6px 0 8px}
+#orgModal .org-type .pill{display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--tm-border); border-radius:999px; background:#fff; cursor:pointer}
+#orgModal .org-type input{width:18px;height:18px}
+
+#orgModal .modal-actions{
+  position:sticky; bottom:0; z-index:2; display:flex; align-items:center; gap:14px;
+  padding:15px 18px; background:var(--tm-surface); border-top:1px solid var(--tm-border);
+}
+#orgModal .modal-actions .spacer{flex:1}
+#orgModal .btn.primary{background:var(--tm-primary);border:1px solid var(--tm-primary);color:#fff}
+#orgModal .btn.primary:disabled{opacity:.7; cursor:not-allowed}
+
+/* Mensagens de erro simples */
+#orgModal .err{color:#b91c1c; font-size:13.5px; margin-top:4px}
+
+/* Acessibilidade/impressão seguem o padrão dos termos (não precisa duplicar) */

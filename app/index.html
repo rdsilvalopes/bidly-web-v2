@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,11 +7,12 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/assets/css/base.css" />
     <link rel="stylesheet" href="/assets/css/app.css" />
-    <link rel="stylesheet" href="/assets/css/activation.css?v=1" />
+    <link rel="stylesheet" href="/assets/css/activation.css?v=2" />
     <style>
       .hide { display: none !important; }
     </style>
   </head>
+
   <body class="wrap has-topbar">
     <!-- ====================== TOPBAR ====================== -->
     <header class="topbar">
@@ -73,7 +73,7 @@
             <div class="desc" id="desc-dados">Complete as informações básicas para operar.</div>
           </div>
           <span class="status st-pending" id="st-dados">Pendente</span>
-          <button class="btn outline sm" id="btnProfile">Preencher</button>
+          <button class="btn outline sm" id="btn-dados">Preencher</button>
         </li>
 
         <!-- 2) Termos -->
@@ -115,7 +115,6 @@
     <section id="bootError" class="card card-pad hide" style="max-width:980px; margin:16px auto"></section>
 
     <!-- Modal: escolher papel (se não houver role) -->
-    
     <div id="modalRole" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalRoleTitle">
       <div class="modal__box">
         <h3 id="modalRoleTitle" style="margin:0 0 8px">Como você quer usar a Bidly?</h3>
@@ -127,66 +126,78 @@
       </div>
     </div>
 
+    <!-- ===== Modal: Dados da organização (tema claro) ===== -->
+    <div id="orgModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="modal-dialog" role="document" aria-labelledby="orgTitle">
+        <div class="modal-header">
+          <h3 id="orgTitle">Dados da organização</h3>
+          <button class="icon" id="orgClose" aria-label="Fechar" title="Fechar">×</button>
+        </div>
 
-    
-                <!-- ===== Modal: Termos de uso ===== -->
-      <div id="termsModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
-        <div class="modal-dialog" role="document" aria-labelledby="termsTitle">
-          <div class="modal-header">
-            <h3 id="termsTitle">Termos de uso</h3>
-            <button class="icon" data-close="1" aria-label="Fechar" title="Fechar">×</button>
-          </div>
-
-          <div class="terms-card">
-            <div class="terms-box" id="termsBox">
-              <!-- o HTML dos termos é carregado aqui via JS -->
-            </div>
-
-            <label class="agree" for="chkAgree">
-              <input type="checkbox" id="chkAgree" />
-              <span>Li e concordo com os termos de uso.</span>
+        <form id="orgForm" class="org-card" autocomplete="off">
+          <!-- Tipo de entidade -->
+          <div class="org-type">
+            <label class="pill">
+              <input type="radio" name="org_type" value="PJ" checked />
+              <span>Pessoa Jurídica (CNPJ)</span>
             </label>
-
-            <small id="scrollHint" class="muted">Role até o fim do documento para habilitar “Aceitar”.</small>
+            <label class="pill">
+              <input type="radio" name="org_type" value="PF" />
+              <span>Pessoa Física (CPF)</span>
+            </label>
           </div>
+
+          <!-- Campos dinâmicos -->
+          <div id="orgFields" class="org-fields"></div>
 
           <div class="modal-actions">
-            <span id="termsMeta" class="meta"></span>
-            <button id="btnPrintTerms" type="button" class="btn link">Salvar PDF</button>
+            <small id="orgHint" class="meta"></small>
             <div class="spacer"></div>
-            <button type="button" class="btn ghost btn-cancel" data-close="1">Cancelar</button>
-            <button id="btnAcceptTerms" type="button" class="btn primary" disabled>Aceitar</button>
+            <button type="button" class="btn ghost" id="btnOrgCancel">Cancelar</button>
+            <button type="submit" class="btn primary" id="btnOrgSubmit">Enviar para análise</button>
           </div>
+        </form>
+      </div>
+    </div>
+    <!-- ===== /Modal ===== -->
+
+    <!-- ===== Modal: Termos de uso ===== -->
+    <div id="termsModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="modal-dialog" role="document" aria-labelledby="termsTitle">
+        <div class="modal-header">
+          <h3 id="termsTitle">Termos de uso</h3>
+          <button class="icon" data-close="1" aria-label="Fechar" title="Fechar">×</button>
+        </div>
+
+        <div class="terms-card">
+          <div class="terms-box" id="termsBox">
+            <!-- o HTML dos termos é carregado aqui via JS -->
+          </div>
+
+          <label class="agree" for="chkAgree">
+            <input type="checkbox" id="chkAgree" />
+            <span>Li e concordo com os termos de uso.</span>
+          </label>
+
+          <small id="scrollHint" class="muted">Role até o fim do documento para habilitar “Aceitar”.</small>
+        </div>
+
+        <div class="modal-actions">
+          <span id="termsMeta" class="meta"></span>
+          <button id="btnPrintTerms" type="button" class="btn link">Salvar PDF</button>
+          <div class="spacer"></div>
+          <button type="button" class="btn ghost btn-cancel" data-close="1">Cancelar</button>
+          <button id="btnAcceptTerms" type="button" class="btn primary" disabled>Aceitar</button>
         </div>
       </div>
-      <!-- ===== /Modal ===== -->
-
-
-
-        <!-- 🔹 Modal: Dados do Perfil -->
-        <div id="modalProfile" class="modal hidden">
-          <div class="modal-content">
-            <h2>Dados do Perfil</h2>
-            <form id="formProfile">
-              <!-- Campos dinâmicos conforme o role -->
-              <div id="profileFields"></div>
-
-              <div class="modal-actions">
-                <button type="button" id="btnCancelProfile">Cancelar</button>
-                <button type="submit" id="btnSaveProfile">Salvar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-
-
+    </div>
+    <!-- ===== /Modal ===== -->
 
     <!-- ============================ SCRIPTS ============================ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
     <script src="/assets/js/supa.js?v=1"></script>
-    <script src="/assets/js/app.js?v=ROLE3"></script>
-    <script src="/assets/js/activation.js?v=1"></script>
+    <script src="/assets/js/app.js?v=ORG3"></script>
+    <script src="/assets/js/activation.js?v=2"></script>
 
     <!-- Menu móvel -->
     <script>
@@ -212,33 +223,5 @@
         onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
       })();
     </script>
-
-
-
-<style>
-  .modal.hidden { display: none; }
-  .modal {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.5); z-index: 9999;
-  }
-  .modal-content {
-    background: #101522; padding: 24px; border-radius: 12px;
-    width: 100%; max-width: 420px; color: #fff;
-  }
-  .modal-content h2 { margin-bottom: 16px; }
-  .modal-content input {
-    width: 100%; padding: 8px; margin: 6px 0 12px;
-    border-radius: 6px; border: 1px solid #333; background: #1c2233; color: #fff;
-  }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-  .modal-actions button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; }
-  #btnCancelProfile { background: #444; color: #ccc; }
-  #btnSaveProfile { background: #3b82f6; color: white; }
-</style>
-
-
-
-
   </body>
 </html>

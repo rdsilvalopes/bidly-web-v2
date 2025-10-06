@@ -1,4 +1,4 @@
-// /assets/js/activation.js — fluxo Termos (e-mail só no PDF)
+// /assets/js/activation.js — Checklist + Termos (unificado)
 (function () {
   const $ = (id) => document.getElementById(id);
 
@@ -9,7 +9,7 @@
     url: "/legal/terms/pt-BR/1/terms.html",
   };
 
-  // estado
+  // --- estado global deste módulo ---
   let uid = null;
   let userEmail = null;
   let profile = null;
@@ -27,14 +27,14 @@
       userEmail = session?.user?.email ?? null;
       if (!uid) return;
 
-      await refreshActivationStatus();
-      bindTermsUI();
+      await renderChecklist(); // 1ª pintura
+      bindTermsUI();           // liga o modal dos termos
     } catch (e) {
       console.warn("[activation] init error:", e);
     }
   }
 
-  // ===== Utils =====
+  // ======= Utils =======
   async function sha256(text) {
     const enc = new TextEncoder().encode(text);
     const buf = await crypto.subtle.digest("SHA-256", enc);
@@ -44,14 +44,13 @@
     if (!el) return;
     el.disabled = !!flag;
     el.setAttribute("aria-disabled", flag ? "true" : "false");
+    el.classList.toggle("is-disabled", !!flag);
   }
-  function setStatus(elId, state) {
-    const el = $(elId);
+  function setStatusPill(el, text, cls) {
     if (!el) return;
+    el.textContent = text;
     el.classList.remove("st-ok", "st-pending", "st-missing");
-    if (state === "ok") { el.classList.add("st-ok"); el.textContent = "Concluído"; }
-    else if (state === "pending") { el.classList.add("st-pending"); el.textContent = "Pendente"; }
-    else { el.classList.add("st-missing"); el.textContent = "Faltando"; }
+    if (cls) el.classList.add(cls);
   }
   function updateAcceptState() {
     const chk = $("chkAgree");
@@ -59,43 +58,102 @@
     disable(btnAccept, !(chk?.checked && loadedTermsHash && scrolledToEnd));
   }
 
-  // ===== Checklist =====
-  async function refreshActivationStatus() {
-    const { data, error } = await sb
-      .from("profiles")
-      .select(
-        "id, role, company_name, document, display_name, linkedin_url, pix_key, accept_terms_at, terms_version"
-      )
-      .eq("id", uid)
-      .maybeSingle();
+  // ======= Lógica de UI p/ “Dados do perfil” =======
+  function computeProfileUI(p) {
+    // Campos novos
+    const status = (p?.status_profile || "").toLowerCase();          // "aprovado" | "em_analise" | "reprovado" | ""
+    const approval = (p?.org_approval_status || "").toLowerCase();   // "aguardando" | "aprovado" | "reprovado" | ""
+    const done = !!p?.checklist_profile_done;
 
-    if (error) { console.warn("[activation] read profile error:", error); return; }
-    profile = data || {};
+    const out = {
+      statusPill: { text: "Pendente", cls: "st-pending" },
+      button: { label: "Preencher", disabled: false },
+      isDone: false,
+    };
 
-    const role = profile?.role || null;
-    const isCompany = role === "company";
+    if (status === "aprovado" || approval === "aprovado" || done) {
+      out.statusPill = { text: "Concluído", cls: "st-ok" };
+      out.button = { label: "Editar", disabled: false };
+      out.isDone = true;
+      return out;
+    }
 
-    const dadosOK = isCompany
-      ? !!(profile?.company_name && profile?.document)
-      : !!(profile?.document || (profile?.display_name && profile?.linkedin_url));
+    if (status === "em_analise" || approval === "aguardando") {
+      out.statusPill = { text: "Em análise", cls: "st-pending" };
+      out.button = { label: "Ver dados", disabled: true }; // conforme alinhado
+      return out;
+    }
 
-    const termosOK = !!profile?.accept_terms_at && Number(profile?.terms_version || 0) >= TERMS.version;
-    const finOK = isCompany ? false : !!profile?.pix_key; // MVP
-    const docsOK = false;
+    if (status === "reprovado" || approval === "reprovado") {
+      out.statusPill = { text: "Pendente", cls: "st-pending" };
+      out.button = { label: "Corrigir", disabled: false };
+      return out;
+    }
 
-    setStatus("st-dados", dadosOK ? "ok" : "pending");
-    setStatus("st-termos", termosOK ? "ok" : "pending");
-    setStatus("st-fin", finOK ? "ok" : "pending");
-    setStatus("st-docs", docsOK ? "ok" : "pending");
-
-    $("actTotal")?.replaceChildren("4");
-    $("actCount")?.replaceChildren(String([dadosOK, termosOK, finOK, docsOK].filter(Boolean).length));
-
-    // botão "Ler & aceitar"
-    disable($("btn-termos"), termosOK);
+    // fallback mantém Pendente/Preencher
+    return out;
   }
 
-  // ===== Modal =====
+  // ======= CHECKLIST (exposto globalmente) =======
+  async function renderChecklist() {
+    try {
+      // Garantir client/sessão
+      const { data: s } = await sb.auth.getSession();
+      const session = s?.session ?? null;
+      uid = session?.user?.id ?? uid;
+      userEmail = session?.user?.email ?? userEmail;
+      if (!uid) return;
+
+      // Buscamos todos os campos que o checklist usa agora
+      const { data, error } = await sb
+        .from("profiles")
+        .select(`
+          id, role,
+          status_profile, org_approval_status, checklist_profile_done,
+          accept_terms_at, terms_version
+        `)
+        .eq("id", uid)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("[checklist] read profile error:", error);
+        return;
+      }
+      profile = data || {};
+
+      // 1) Dados do perfil (novo fluxo)
+      const ui = computeProfileUI(profile);
+      setStatusPill($("st-dados"), ui.statusPill.text, ui.statusPill.cls);
+      const btnDados = $("btnProfile") || $("btn-dados");
+      if (btnDados) {
+        btnDados.textContent = ui.button.label;
+        disable(btnDados, ui.button.disabled);
+      }
+
+      // 2) Termos (mantém lógica antiga)
+      const termosOK = !!profile?.accept_terms_at && Number(profile?.terms_version || 0) >= TERMS.version;
+      setStatusPill($("st-termos"), termosOK ? "Concluído" : "Pendente", termosOK ? "st-ok" : "st-pending");
+      disable($("btn-termos"), termosOK);
+
+      // 3) Financeiro (por enquanto continua pendente; será tratado na próxima etapa)
+      setStatusPill($("st-fin"), "Pendente", "st-pending");
+
+      // 4) Documentos (em breve)
+      setStatusPill($("st-docs"), "Pendente", "st-pending");
+
+      // Contador simples (apenas dados + termos contam por enquanto)
+      const doneCount = (ui.isDone ? 1 : 0) + (termosOK ? 1 : 0);
+      $("actTotal")?.replaceChildren("4");
+      $("actCount")?.replaceChildren(String(doneCount));
+    } catch (e) {
+      console.warn("[checklist] exceção:", e);
+    }
+  }
+
+  // Torna público (o app.js chama após salvar dados)
+  window.renderChecklist = renderChecklist;
+
+  // ======= TERMO DE USO (mantido) =======
   function bindTermsUI() {
     const btnOpen   = $("btn-termos");
     const modal     = $("termsModal");
@@ -126,7 +184,7 @@
       try {
         await persistTermsAcceptance();
         closeModal(modal);
-        await refreshActivationStatus();
+        await renderChecklist(); // atualiza o item "Termos"
       } catch (e) {
         console.error("[activation] accept terms error:", e);
         alert("Não foi possível salvar sua aceitação. Tente novamente.");
@@ -148,8 +206,8 @@
 
     const box       = document.querySelector("#termsModal .terms-box");
     const btnPrint  = $("btnPrintTerms");
-    const metaSpan  = $("termsMeta");   // linha de versão/data/idioma no rodapé
-    const hint      = $("scrollHint");  // se você estiver usando uma dica "role até o fim"
+    const metaSpan  = $("termsMeta");
+    const hint      = $("scrollHint");
 
     if (box) box.innerHTML = "<p>Carregando…</p>";
     disable(btnPrint, true);
@@ -157,7 +215,6 @@
     updateAcceptState();
     hint?.classList.remove("hide");
 
-    // meta SEM e-mail (só no PDF vamos incluir e-mail)
     const now = new Date();
     if (metaSpan) {
       metaSpan.textContent =
@@ -175,7 +232,6 @@
       if (box) {
         box.innerHTML = html;
 
-        // compliance: precisa rolar até o fim
         const checkEnd = () => {
           if (!box) return;
           const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
@@ -186,7 +242,7 @@
           }
         };
         box.addEventListener("scroll", checkEnd, { passive: true });
-        requestAnimationFrame(checkEnd); // estado inicial
+        requestAnimationFrame(checkEnd);
       }
 
       disable(btnPrint, false);
@@ -200,7 +256,6 @@
     }
   }
 
-  // === Impressão / "Salvar como PDF" (apenas aqui aparece o e-mail) ===
   function printTermsAsPdf() {
     if (!termsRawHtml) return;
     try {
@@ -242,7 +297,6 @@
     }
   }
 
-  // grava aceitação
   async function persistTermsAcceptance() {
     const role = profile?.role ?? null;
     const userAgent = navigator.userAgent ?? null;
