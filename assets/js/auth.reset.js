@@ -10,7 +10,32 @@
   const hide = (el) => el && (el.style.display = 'none');
   const setMsg = (msg) => { if (feedback) feedback.textContent = msg || ''; };
 
-  // Lê parâmetros do hash (?type=recovery&code=...)
+  // --- i18n de erros comuns do Supabase (PT-BR) ---------------------------
+  function msgAuthPT(err) {
+    const raw = (err?.message || err || '').toString();
+    const s = raw.trim().toLowerCase();
+
+    const known = [
+      [/invalid or expired.*(link|token)/, "Link inválido ou expirado. Gere um novo link."],
+      [/token.*(already used|used)/, "Este link de redefinição já foi utilizado. Gere um novo link."],
+      [/password.*at least.*8/, "A senha deve ter no mínimo 8 caracteres."],
+      [/password.*at least.*6/, "A senha deve ter no mínimo 6 caracteres."],
+      [/new password should be different/, "A nova senha deve ser diferente da atual."],
+      [/password.*too short/, "A senha informada é muito curta."],
+      [/password.*too weak/, "A senha é muito fraca. Use letras e números."],
+      [/invalid login credentials/, "Credenciais inválidas."],
+      [/email not found|user not found/, "Usuário não encontrado."],
+      [/networkerror|failed to fetch/, "Falha de rede. Verifique sua conexão e tente novamente."],
+      [/unexpected error|unknown error/, "Ocorreu um erro inesperado. Tente novamente."]
+    ];
+
+    for (const [pat, msg] of known) {
+      if (pat.test(s)) return msg;
+    }
+    return "Não foi possível concluir a operação. Tente novamente em instantes.";
+  }
+
+  // Lê parâmetros do hash (#type=recovery&...); mantém sua lógica
   const hash = window.location.hash.replace(/^#/, '');
   const hp = new URLSearchParams(hash);
   const type = hp.get('type');
@@ -30,16 +55,17 @@
         return;
       }
 
-      const { error } = await supa.auth.updateUser({ password: newPwd });
-      if (error) {
-        setMsg(error.message || 'Não foi possível salvar a nova senha.');
-        return;
-      }
+      try {
+        const { error } = await supa.auth.updateUser({ password: newPwd });
+        if (error) throw error;
 
-      // Mensagem rápida e volta pra home sem manter sessão
-      setMsg('Senha atualizada. Redirecionando…');
-      await supa.auth.signOut();
-      window.location.href = '/';
+        // Sucesso → encerra sessão local e volta ao login (acordo)
+        setMsg('Senha atualizada. Redirecionando…');
+        await supa.auth.signOut();
+        window.location.href = '/';
+      } catch (err) {
+        setMsg(msgAuthPT(err));
+      }
     }, { once: true });
   }
 
@@ -61,8 +87,12 @@
       const { error } = await supa.auth.exchangeCodeForSession(window.location.hash);
       if (error) throw error;
 
+      // Opcional: limpar hash por estética/segurança
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+
       await prepareForm();
     } catch (err) {
+      setMsg(msgAuthPT(err));
       showExpired();
     }
   }

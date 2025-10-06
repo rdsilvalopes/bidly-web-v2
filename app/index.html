@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+  
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,15 +8,13 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/assets/css/base.css" />
     <link rel="stylesheet" href="/assets/css/app.css" />
+    <link rel="stylesheet" href="/assets/css/activation.css?v=1" />
     <style>
-      /* fallback para debug: garantir que .hide exista */
-      .hide {
-        display: none !important;
-      }
+      .hide { display: none !important; }
     </style>
   </head>
   <body class="wrap has-topbar">
-    <!-- ====================== TOPBAR (mostra apenas estado logado) ====================== -->
+    <!-- ====================== TOPBAR ====================== -->
     <header class="topbar">
       <div class="container">
         <a class="brand" href="/index.html" aria-label="Bidly">
@@ -30,18 +29,14 @@
         </nav>
 
         <div class="actions">
-          <!-- Aparece só quando logado -->
-          <span class="muted hide" data-auth>
+          <span class="muted" data-auth>
             Logado como: <b id="userEmail">—</b>
+            <span id="userRoleText"> • Perfil: —</span>
           </span>
+
           <button id="btnOutTop" class="btn hide" data-auth>Sair</button>
 
-          <!-- Hamburger (menu móvel) -->
-          <button
-            class="menu-toggle"
-            aria-expanded="false"
-            aria-label="Abrir menu"
-          >
+          <button class="menu-toggle" aria-expanded="false" aria-label="Abrir menu">
             <span></span><span></span><span></span>
           </button>
         </div>
@@ -54,8 +49,6 @@
           <a href="/index.html#como-funciona" class="mm-link">Como funciona</a>
           <a href="/index.html#precos" class="mm-link">Preços</a>
           <a href="/index.html#faq" class="mm-link">FAQ</a>
-
-          <!-- Ações de autenticado (aparecem após applyAuthUI/requireAuth) -->
           <div class="mm-actions hide" data-auth>
             <button id="btnOutMobile" class="btn ghost mm-btn">Sair</button>
           </div>
@@ -64,108 +57,140 @@
     </header>
     <!-- ==================== /TOPBAR ==================== -->
 
-    <!-- Conteúdo da aplicação -->
-    <section class="card card-pad" style="max-width: 980px; margin: 24px auto">
-      <p>Login funcionando ✅. Aqui é a página da aplicação.</p>
+    <!-- ==================== CONTEÚDO ==================== -->
+    <section class="card card-pad activation-card" id="activationCard">
+      <div class="head">
+        <div class="activation-title">Ativação da conta</div>
+        <div class="activation-progress"><span id="actCount">0</span> / <span id="actTotal">4</span> concluídos</div>
+      </div>
+
+      <ul class="activation-list">
+        <!-- 1) Dados -->
+        <li class="activation-item" id="row-dados">
+          <div class="badge">1</div>
+          <div class="info">
+            <div class="title">Dados do perfil</div>
+            <div class="desc" id="desc-dados">Complete as informações básicas para operar.</div>
+          </div>
+          <span class="status st-pending" id="st-dados">Pendente</span>
+          <button class="btn outline sm" id="btn-dados">Preencher</button>
+        </li>
+
+        <!-- 2) Termos -->
+        <li class="activation-item" id="row-termos">
+          <div class="badge">2</div>
+          <div class="info">
+            <div class="title">Termos de uso</div>
+            <div class="desc">É necessário aceitar os termos para continuar.</div>
+          </div>
+          <span class="status st-pending" id="st-termos">Pendente</span>
+          <button class="btn outline sm" id="btn-termos">Ler & aceitar</button>
+        </li>
+
+        <!-- 3) Financeiro -->
+        <li class="activation-item" id="row-fin">
+          <div class="badge">3</div>
+          <div class="info">
+            <div class="title">Financeiro</div>
+            <div class="desc" id="desc-fin">Configure para receber/pagar com segurança.</div>
+          </div>
+          <span class="status st-pending" id="st-fin">Pendente</span>
+          <button class="btn outline sm" id="btn-fin">Configurar</button>
+        </li>
+
+        <!-- 4) Documentos -->
+        <li class="activation-item" id="row-docs">
+          <div class="badge">4</div>
+          <div class="info">
+            <div class="title">Documentos</div>
+            <div class="desc">Envio e verificação de documentos (em breve).</div>
+          </div>
+          <span class="status st-pending" id="st-docs">Pendente</span>
+          <button class="btn outline sm" id="btn-docs" disabled aria-disabled="true" title="Em breve">Em breve</button>
+        </li>
+      </ul>
     </section>
 
-    <!-- (Opcional) área para exibir erro de boot caso algo dê errado -->
-    <section
-      id="bootError"
-      class="card card-pad hide"
-      style="max-width: 980px; margin: 16px auto"
-    ></section>
+    <!-- Erro de boot -->
+    <section id="bootError" class="card card-pad hide" style="max-width:980px; margin:16px auto"></section>
 
-    <!-- ============================ SCRIPTS (ORDEM IMPORTA) ============================ -->
-    <!-- 1) UMD do Supabase -->
+    <!-- Modal: escolher papel (se não houver role) -->
+    <div id="modalRole" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalRoleTitle">
+      <div class="modal__box">
+        <h3 id="modalRoleTitle" style="margin:0 0 8px">Como você quer usar a Bidly?</h3>
+        <p class="muted" style="margin:0 0 16px">Escolha para continuar. (Você pode solicitar mudança depois com nosso suporte.)</p>
+        <div class="modal__actions">
+          <button id="btnRoleCompany" class="btn">Sou Empresa</button>
+          <button id="btnRoleVendor" class="btn outline">Sou Fornecedor</button>
+        </div>
+      </div>
+    </div>
+
+
+    
+                <!-- ===== Modal: Termos de uso ===== -->
+      <div id="termsModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="modal-dialog" role="document" aria-labelledby="termsTitle">
+          <div class="modal-header">
+            <h3 id="termsTitle">Termos de uso</h3>
+            <button class="icon" data-close="1" aria-label="Fechar" title="Fechar">×</button>
+          </div>
+
+          <div class="terms-card">
+            <div class="terms-box" id="termsBox">
+              <!-- o HTML dos termos é carregado aqui via JS -->
+            </div>
+
+            <label class="agree" for="chkAgree">
+              <input type="checkbox" id="chkAgree" />
+              <span>Li e concordo com os termos de uso.</span>
+            </label>
+
+            <small id="scrollHint" class="muted">Role até o fim do documento para habilitar “Aceitar”.</small>
+          </div>
+
+          <div class="modal-actions">
+            <span id="termsMeta" class="meta"></span>
+            <button id="btnPrintTerms" type="button" class="btn link">Salvar PDF</button>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost btn-cancel" data-close="1">Cancelar</button>
+            <button id="btnAcceptTerms" type="button" class="btn primary" disabled>Aceitar</button>
+          </div>
+        </div>
+      </div>
+      <!-- ===== /Modal ===== -->
+
+
+
+    <!-- ============================ SCRIPTS ============================ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
-
-    <!-- 2) Núcleo unificado (connectSupabase/requireAuth/applyAuthUI/logoutLocal) -->
     <script src="/assets/js/supa.js?v=1"></script>
+    <script src="/assets/js/app.js?v=ROLE3"></script>
+    <script src="/assets/js/activation.js?v=1"></script>
 
-    <!-- 3) Boot da página privada -->
-    <script>
-      (async () => {
-        const showBootError = (msg) => {
-          const box = document.getElementById("bootError");
-          if (!box) return;
-          box.innerHTML = `<b>Erro ao inicializar a app:</b><br><small>${msg}</small>`;
-          box.classList.remove("hide");
-        };
-
-        try {
-          // Garante sessão (se não tiver, redireciona p/ /index.html)
-          const session = await requireAuth();
-
-          // Alterna UI (mostra [data-auth], preenche #userEmail)
-          await applyAuthUI();
-
-          // Handlers de sair
-          const doLogout = async () => {
-            try {
-              await logoutLocal();
-            } catch {}
-            location.href = "/index.html";
-          };
-          document
-            .getElementById("btnOutTop")
-            ?.addEventListener("click", doLogout);
-          document
-            .getElementById("btnOutMobile")
-            ?.addEventListener("click", doLogout);
-        } catch (e) {
-          console.error(e);
-          showBootError(e?.message || "Falha inesperada.");
-        }
-      })();
-    </script>
-
-    <!-- 4) Menu móvel -->
+    <!-- Menu móvel -->
     <script>
       (function () {
         const btn = document.querySelector(".menu-toggle");
         const mobile = document.querySelector(".mobile-menu");
         if (!btn || !mobile) return;
-
-        const open = () => {
-          document.body.classList.add("menu-open");
-          btn.classList.add("is-open");
-          btn.setAttribute("aria-expanded", "true");
-          mobile.setAttribute("aria-hidden", "false");
-        };
-        const close = () => {
-          document.body.classList.remove("menu-open");
-          btn.classList.remove("is-open");
-          btn.setAttribute("aria-expanded", "false");
-          mobile.setAttribute("aria-hidden", "true");
-        };
-        const toggle = () =>
-          document.body.classList.contains("menu-open") ? close() : open();
-
-        btn.addEventListener("click", toggle);
-        mobile.addEventListener("click", (e) => {
-          if (e.target.classList.contains("mm-link")) close();
-        });
-        window.addEventListener("keyup", (e) => {
-          if (e.key === "Escape") close();
-        });
-        window.addEventListener("resize", () => {
-          if (window.innerWidth > 900) close();
-        });
+        const open = () => { document.body.classList.add("menu-open"); btn.classList.add("is-open"); btn.setAttribute("aria-expanded", "true"); mobile.setAttribute("aria-hidden", "false"); };
+        const close = () => { document.body.classList.remove("menu-open"); btn.classList.remove("is-open"); btn.setAttribute("aria-expanded", "false"); mobile.setAttribute("aria-hidden", "true"); };
+        btn.addEventListener("click", () => document.body.classList.contains("menu-open") ? close() : open());
+        mobile.addEventListener("click", (e) => { if (e.target.classList.contains("mm-link")) close(); });
+        window.addEventListener("keyup", (e) => { if (e.key === "Escape") close(); });
+        window.addEventListener("resize", () => { if (window.innerWidth > 900) close(); });
       })();
     </script>
 
-    <!-- 5) (Opcional) sombra sutil na topbar -->
+    <!-- Sombra sutil na topbar -->
     <script>
       (function () {
         const topbar = document.querySelector(".topbar");
         if (!topbar) return;
-        const onScroll = () =>
-          topbar.classList.toggle("is-scrolled", window.scrollY > 4);
-        onScroll();
-        window.addEventListener("scroll", onScroll, { passive: true });
+        const onScroll = () => topbar.classList.toggle("is-scrolled", window.scrollY > 4);
+        onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
       })();
     </script>
-    <!-- ========================== /SCRIPTS ========================== -->
   </body>
 </html>

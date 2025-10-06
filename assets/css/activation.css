@@ -1,0 +1,147 @@
+/* ===== Modal genérico ===== */
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(7,12,22,.6);
+  z-index:9999; /* ↑↑ mantêm acima do header/nav */
+  padding:24px;
+}
+.modal[aria-hidden="false"]{display:flex}
+body.modal-open{overflow:hidden}
+
+/* ===== Checklist de ativação (base) ===== */
+.activation-card{max-width:980px;margin:28px auto}
+.activation-card .head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.activation-title{font-weight:800;font-size:20px;line-height:1.35;color:#e8eefb}
+.activation-progress{font-size:15px;color:#cfe3ff}
+.activation-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.activation-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.activation-item .badge{min-width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;background:rgba(56,189,248,.12);color:#86d5ff;font-size:14px}
+.activation-item .info{flex:1}
+.activation-item .title{font-weight:700;color:#e8eefb;font-size:19.5px}
+.activation-item .desc{color:#d7e9ff;font-size:18.5px;line-height:1.5}
+.activation-item .status{font-size:16.5px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12)}
+.st-ok{color:#bff5df;border-color:#2dd4bf}
+.st-pending{color:#ffe9b6;border-color:#fbbf24}
+.st-missing{color:#ffd1d1;border-color:#f87171}
+.btn.sm{height:40px;padding:0 14px;font-size:15px}
+.btn.sm:focus-visible,.activation-item .status:focus-visible{outline:2px solid #89c6ff;outline-offset:2px}
+@media (max-width:640px){
+  .activation-card .head{flex-direction:column;align-items:flex-start}
+  .activation-item{padding:16px}
+  .activation-item .badge{min-width:30px;height:30px;font-size:15px}
+  .activation-item .title{font-size:17px}
+  .activation-item .desc{font-size:15px}
+  .btn.sm{height:44px;padding:0 16px;font-size:16px}
+}
+.btn[disabled],.btn[aria-disabled="true"],.btn.is-disabled{opacity:.6;pointer-events:none;cursor:default}
+
+/* ===== Termos de uso — Tema claro só no modal ===== */
+#termsModal{
+  --tm-bg:#fff;           /* fundo */
+  --tm-fg:#111827;        /* texto */
+  --tm-muted:#4b5563;     /* ícones/detalhes */
+  --tm-border:#e5e7eb;    /* linhas */
+  --tm-surface:#f8fafc;   /* rodapé */
+  --tm-link:#1d4ed8;      /* links */
+  --tm-primary:#2563eb;   /* aceitar */
+
+  /* padding do overlay com safe-area (iOS/Android) */
+  --overlay-pad-y: calc(48px + env(safe-area-inset-top));
+  padding: var(--overlay-pad-y) 24px;
+}
+
+/* Diálogo: largura, layout, cantos e overflow */
+#termsModal .modal-dialog{
+  background:var(--tm-bg); color:var(--tm-fg);
+  border:1px solid var(--tm-border); border-radius:16px;
+  box-shadow:0 24px 64px rgba(0,0,0,.18);
+  width:min(760px,94vw);
+  max-height: calc(100vh - (var(--overlay-pad-y) * 2)); /* compensa a folga do overlay */
+  display:flex; flex-direction:column; overflow:hidden;
+}
+
+/* Cabeçalho “sticky” */
+#termsModal .modal-header{
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; justify-content:center;
+  padding:14px 48px 14px 18px;
+  background:var(--tm-bg); border-bottom:1px solid var(--tm-border);
+  font-weight:800;
+}
+#termsModal .modal-header .icon{
+  position:absolute; top:8px; right:10px;
+  width:36px;height:36px; line-height:36px; font-size:22px;
+  border:0;border-radius:10px;background:transparent;color:var(--tm-muted);cursor:pointer;
+}
+#termsModal .modal-header .icon:hover{background:#f3f4f6;color:var(--tm-fg)}
+
+/* Área rolável do conteúdo */
+#termsModal .terms-card{flex:1; overflow:auto; padding:0 18px; background:var(--tm-bg)}
+#termsModal .terms-box{
+  background:#fff; color:#111827;
+  border:1px solid #e5e7eb; border-radius:8px;
+  padding:16px; max-height:none; overflow:visible;
+  scrollbar-gutter:stable;
+}
+#termsModal .terms-box > :first-child{margin-top:0!important}
+
+/* Hierarquia de texto do documento */
+#termsModal .terms-box h1{font-size:22px;font-weight:800;margin:6px 0 10px}
+#termsModal .terms-box h2{font-size:18px;font-weight:800;margin:14px 0 8px}
+#termsModal .terms-box h3{font-size:16px;font-weight:700;margin:12px 0 6px}
+#termsModal .terms-box p{margin:0 0 10px}
+#termsModal .terms-box ul,#termsModal .terms-box ol{margin:8px 0 12px;padding-left:22px}
+#termsModal .terms-box a{color:var(--tm-link);text-decoration:underline}
+#termsModal .terms-box::-webkit-scrollbar{width:10px}
+#termsModal .terms-box::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:999px}
+
+/* Checkbox de concordância */
+#termsModal .agree{display:flex;align-items:center;gap:8px;margin:12px 0 8px}
+#termsModal .agree input{width:18px;height:18px}
+#termsModal .agree span{font-size:15px}
+
+/* Rodapé fixo */
+#termsModal .modal-actions{
+  position:sticky; bottom:0; z-index:2;
+  display:flex; align-items:center; gap:14px;
+  padding:15px 18px;
+  background:var(--tm-surface); border-top:1px solid var(--tm-border);
+}
+#termsModal .modal-actions .spacer{flex:1}
+
+/* Botões */
+#termsModal button{height:44px;border-radius:12px;font-weight:600}
+#termsModal #btnAcceptTerms{background:var(--tm-primary);border:1px solid var(--tm-primary);color:#fff}
+#termsModal #btnAcceptTerms:hover:not(:disabled){filter:brightness(.95)}
+#termsModal #btnAcceptTerms:disabled{background:#c7d2fe;border-color:#c7d2fe;color:#fff;opacity:.85;cursor:not-allowed}
+#termsModal .btn-cancel{background:#f3f4f6;border:1px solid var(--tm-border);color:var(--tm-fg)}
+
+/* Link “Baixar PDF” com aparência de âncora */
+#btnPrintTerms{
+  background:transparent;border:0;height:auto;padding:0;
+  color:var(--tm-link);text-decoration:underline;font-weight:600;cursor:pointer
+}
+#btnPrintTerms:hover{text-decoration:none;color:#1e40af}
+#btnPrintTerms:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
+#btnPrintTerms[disabled]{color:#9ca3af;text-decoration:none;cursor:not-allowed}
+
+/* ===== Impressão: só o conteúdo dos termos ===== */
+@media print{
+  body *{visibility:hidden!important}
+  #termsModal,#termsModal *{visibility:visible!important}
+  #termsModal{position:static!important;inset:auto!important;background:#fff!important}
+  #termsModal .modal-header,#termsModal .modal-actions{display:none!important}
+  #termsModal .modal-dialog{box-shadow:none!important;border:none!important;width:auto!important;max-width:none!important;margin:0!important;padding:0 24px!important}
+  #termsModal .terms-card{padding:0!important}
+  #termsModal .terms-box{border:0!important;padding:0!important}
+}
+
+/* Ajuste extra para telas muito baixas */
+@media (max-height:680px){
+  #termsModal{ --overlay-pad-y: calc(32px + env(safe-area-inset-top)); }
+  #termsModal .modal-dialog{max-height: calc(100vh - (var(--overlay-pad-y) * 2));}
+}
