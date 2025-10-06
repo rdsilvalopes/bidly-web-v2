@@ -2,25 +2,31 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
+  // 🔒 Pré-hide do modal de papel (evita flash antes da checagem assíncrona)
+  try {
+    const __mr = document.getElementById("modalRole");
+    if (__mr) {
+      __mr.classList.add("hide");
+      __mr.setAttribute("aria-hidden", "true");
+    }
+  } catch {}
+
   document.addEventListener("DOMContentLoaded", boot);
 
   // -------- Logout hard (limpa tudo e encerra sessão em todas as abas) --------
   async function hardSignOut({ redirect = true } = {}) {
     try {
-      // sai globalmente (todas as abas/dispositivos desta sessão)
       await sb?.auth?.signOut?.({ scope: "global" });
     } catch (e) {
       console.warn("[auth] signOut falhou (ok continuar):", e);
     }
 
-    // remove tokens do supabase guardados pelo sdk
     try {
       Object.keys(localStorage)
         .filter((k) => /^sb-.*-auth-token$/.test(k) || k.startsWith("supabase"))
         .forEach((k) => localStorage.removeItem(k));
     } catch {}
 
-    // limpa caches (PWA/CacheStorage), se houver
     try {
       if ("caches" in window) {
         const keys = await caches.keys();
@@ -30,13 +36,9 @@
       console.warn("[auth] limpar caches: ignorado", e);
     }
 
-    // (opcional) se você criou um IndexedDB próprio, apague aqui
-    // try { indexedDB.deleteDatabase('seu-db'); } catch {}
-
     if (redirect) location.href = "/index.html";
   }
 
-  // Exponho para uso eventual no console (emergência)
   window.hardSignOut = hardSignOut;
 
   // -------- Verificação segura da sessão (auto-cura) --------
@@ -47,20 +49,13 @@
 
       const session = data?.session ?? null;
       if (!session) {
-        // sem sessão -> vai p/ login
         location.href = "/index.html";
         return null;
       }
 
-      // Validação rápida do token com uma consulta autorizada pelo RLS do próprio usuário
       const uid = session.user?.id;
-      const ping = await sb
-        .from("profiles")
-        .select("id")
-        .eq("id", uid)
-        .limit(1);
+      const ping = await sb.from("profiles").select("id").eq("id", uid).limit(1);
 
-      // Se 401/403 ou erro de JWT, limpa e redireciona (cura loop)
       const unauthorized =
         ping.error &&
         (ping.error.status === 401 ||
@@ -84,30 +79,23 @@
   // -------- Boot do app --------
   async function boot() {
     try {
-      // permite forçar logout via URL: /app?logout=1
       if (new URLSearchParams(location.search).get("logout") === "1") {
         await hardSignOut();
         return;
       }
 
-      // 1) Conecta Supabase (vem do /assets/js/supa.js)
       await connectSupabase();
-
-      // 2) Sessão validada (auto-cura se inválida)
       const session = await safeInitAuth();
-      if (!session) return; // já redirecionou
+      if (!session) return;
 
-      // 3) Topo: e-mail
       const email = session.user?.email || "—";
       $("userEmail")?.replaceChildren(email);
 
-      // 4) Mostrar elementos gated por login
       document.querySelectorAll("[data-auth]").forEach((el) => {
         el.classList.remove("hide");
         el.removeAttribute("aria-hidden");
       });
 
-      // 5) Botão Sair (hard)
       const btnOut = $("btnOutTop") || $("btnSignOut");
       if (btnOut) {
         btnOut.addEventListener("click", async (ev) => {
@@ -116,13 +104,44 @@
         });
       }
 
-      // 6) Papel/Perfil do usuário
+      // 6) Exibe papel no topo
       await paintUserRole(session);
 
-      // 7) Se sair em outra aba, volta ao login
+      // 6.1) Corrige bug: não exibir modalRole se o perfil já tem role
+      try {
+        const uid = session.user?.id;
+        if (uid) {
+          const { data: prof, error: e } = await sb
+            .from("profiles")
+            .select("role")
+            .eq("id", uid)
+            .maybeSingle();
+
+          if (!e) {
+            const role = prof?.role;
+            const modalRole = document.getElementById("modalRole");
+            if (modalRole) {
+              if (role) {
+                modalRole.classList.add("hide");
+                modalRole.setAttribute("aria-hidden", "true");
+              } else {
+                modalRole.classList.remove("hide");
+                modalRole.setAttribute("aria-hidden", "false");
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[modalRole-check] erro ao verificar role:", err);
+      }
+
+      // 7) Sair em outra aba → logout global
       sb.auth.onAuthStateChange((evt) => {
         if (evt === "SIGNED_OUT") location.href = "/index.html";
       });
+
+      // 🔹 Inicializa módulo de perfil (dados)
+      bindProfileButton();
     } catch (e) {
       console.error("[app] boot error:", e);
       alert(e?.message || String(e));
@@ -143,7 +162,6 @@
         return;
       }
 
-      // Leitura 1: profiles.id = uid
       let { data, error } = await sb
         .from("profiles")
         .select("role")
@@ -154,7 +172,6 @@
 
       let role = Array.isArray(data) && data.length ? data[0]?.role : null;
 
-      // Fallback: profiles.user_id = uid (se existir coluna)
       if (!role) {
         const r2 = await sb
           .from("profiles")
@@ -166,7 +183,6 @@
         role = Array.isArray(r2.data) && r2.data.length ? r2.data[0]?.role : null;
       }
 
-      // Normaliza rótulo
       const isVendor = role === "vendor" || role === "supplier";
       const label =
         role === "company" ? "Empresa" : isVendor ? "Fornecedor" : "—";
@@ -177,5 +193,86 @@
       console.warn("[role] erro ao obter role:", e);
       setRoleText("—");
     }
+  }
+
+  // ==========================================================
+  // 🔹 MÓDULO NOVO — “Dados do Perfil” (Empresa / Fornecedor)
+  // ==========================================================
+  async function openProfileModal() {
+    const modal = $("modalProfile");
+    const fields = $("profileFields");
+    const { data: userData } = await sb.auth.getUser();
+    const user = userData?.user;
+    if (!user?.id) return;
+
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    fields.innerHTML = "";
+    const role = profile.role;
+
+    if (role === "company") {
+      fields.innerHTML = `
+        <label>Razão Social</label>
+        <input id="company_name" value="${profile.company_name ?? ""}" placeholder="Ex: Acme Ltda" />
+        <label>CNPJ</label>
+        <input id="company_cnpj" value="${profile.company_cnpj ?? ""}" placeholder="00.000.000/0001-00" />
+      `;
+    } else if (role === "vendor") {
+      fields.innerHTML = `
+        <label>Nome Público</label>
+        <input id="vendor_display_name" value="${profile.vendor_display_name ?? ""}" placeholder="Ex: João Silva" />
+        <label>CPF</label>
+        <input id="vendor_cpf" value="${profile.vendor_cpf ?? ""}" placeholder="000.000.000-00" />
+        <label>LinkedIn (opcional)</label>
+        <input id="vendor_linkedin_url" value="${profile.vendor_linkedin_url ?? ""}" placeholder="https://linkedin.com/in/..." />
+      `;
+    } else {
+      fields.innerHTML = `<p style="color:#ccc">Tipo de conta não definido.</p>`;
+    }
+
+    modal.classList.remove("hidden");
+    $("btnCancelProfile").onclick = () => modal.classList.add("hidden");
+
+    $("formProfile").onsubmit = async (e) => {
+      e.preventDefault();
+
+      let updates = {};
+      if (role === "company") {
+        const name = $("company_name").value.trim();
+        const cnpj = $("company_cnpj").value.trim();
+        if (!name || !cnpj) return alert("Preencha todos os campos obrigatórios.");
+        updates = { company_name: name, company_cnpj: cnpj };
+      } else {
+        const name = $("vendor_display_name").value.trim();
+        const cpf = $("vendor_cpf").value.trim();
+        const linkedin = $("vendor_linkedin_url").value.trim();
+        if (!name || !cpf) return alert("Preencha nome e CPF.");
+        updates = {
+          vendor_display_name: name,
+          vendor_cpf: cpf,
+          vendor_linkedin_url: linkedin,
+        };
+      }
+
+      updates.checklist_profile_done = true;
+
+      const { error } = await sb.from("profiles").update(updates).eq("id", user.id);
+      if (error) return alert("Erro ao salvar: " + error.message);
+
+      alert("Dados salvos com sucesso!");
+      modal.classList.add("hidden");
+      if (typeof renderChecklist === "function") renderChecklist();
+    };
+  }
+
+  // 🔸 Atacha o evento do botão “Preencher”
+  function bindProfileButton() {
+    const btn = document.getElementById("btnProfile");
+    if (btn) btn.onclick = openProfileModal;
+    else console.warn("⚠️ botão de perfil não encontrado (id=btnProfile)");
   }
 })();
