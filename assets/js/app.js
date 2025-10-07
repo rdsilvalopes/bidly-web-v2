@@ -1,16 +1,23 @@
-// /assets/js/app.js — robusto c/ auto-cura + modal claro de Organização (PJ/CPF) + escolha/lock por role
+// /assets/js/app.js — boot seguro + Organização (PJ/CPF) + Financeiro (PIX)
 (function () {
   const $ = (id) => document.getElementById(id);
 
   document.addEventListener("DOMContentLoaded", boot);
 
-  // ---------- Utils simples ----------
-  function show(el) { el?.classList.remove("hide"); el?.setAttribute?.("aria-hidden", "false"); }
-  function hide(el) { el?.classList.add("hide"); el?.setAttribute?.("aria-hidden", "true"); }
+  // ---------- Utils ----------
+  function show(el) { if (el) { el.classList.remove("hide"); if (el.setAttribute) el.setAttribute("aria-hidden", "false"); } }
+  function hide(el) { if (el) { el.classList.add("hide");  if (el.setAttribute) el.setAttribute("aria-hidden", "true"); } }
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function onlyDigits(s) { return String(s || "").replace(/\D+/g, ""); }
 
-  // ---------- Logout hard ----------
   async function hardSignOut({ redirect = true } = {}) {
-    try { await sb?.auth?.signOut?.({ scope: "global" }); } catch (e) { console.warn("[auth] signOut falhou:", e); }
+    try { await sb?.auth?.signOut?.({ scope: "global" }); } catch {}
     try {
       Object.keys(localStorage)
         .filter((k) => /^sb-.*-auth-token$/.test(k) || k.startsWith("supabase"))
@@ -21,12 +28,11 @@
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
-    } catch (e) { console.warn("[auth] limpar caches:", e); }
+    } catch {}
     if (redirect) location.href = "/index.html";
   }
   window.hardSignOut = hardSignOut;
 
-  // ---------- Sessão segura ----------
   async function safeInitAuth() {
     try {
       const { data, error } = await sb.auth.getSession();
@@ -39,8 +45,7 @@
       const unauthorized = ping.error && (ping.error.status === 401 || ping.error.status === 403 || /jwt|token/i.test(ping.error.message || ""));
       if (unauthorized) { await hardSignOut({ redirect: true }); return null; }
       return session;
-    } catch (e) {
-      console.warn("[auth] safeInitAuth:", e);
+    } catch {
       await hardSignOut({ redirect: true });
       return null;
     }
@@ -65,23 +70,24 @@
 
       await paintUserRole(session);
 
-      // Wire modal "Escolher perfil"
+      // Role chooser
       wireRoleChooser(session);
-
-      // Mostrar/ocultar modalRole de acordo com a existência do role
       await toggleRoleModalByProfile(session);
 
       // Reagir a logout em outra aba
       sb.auth.onAuthStateChange((evt) => { if (evt === "SIGNED_OUT") location.href = "/index.html"; });
 
-      // Botão "Dados do perfil" (id=btn-dados)
-      const btnDados = $("btn-dados");
-      btnDados?.addEventListener("click", (ev) => { ev.preventDefault(); openOrgModal(); });
-      if (!btnDados) console.warn("⚠️ botão de perfil não encontrado (id=btn-dados)");
+      // Dados do perfil
+      $("btn-dados")?.addEventListener("click", (ev) => { ev.preventDefault(); openOrgModal(); });
 
-      // Modal claro de organização
+      // Financeiro (PIX) — garante amarração
+      $("btn-fin")?.addEventListener("click", (ev) => { ev.preventDefault(); openFinModal(); });
+
+      // Modais
       wireOrgForm();
-      window.addEventListener("keyup", (e) => { if (e.key === "Escape") closeOrgModal(); });
+      wireFinForm();
+
+      window.addEventListener("keyup", (e) => { if (e.key === "Escape") { closeOrgModal(); closeFinModal(); } });
 
     } catch (e) {
       console.error("[app] boot error:", e);
@@ -98,17 +104,13 @@
       if (!uid) { setRoleText("—"); return; }
       let { data } = await sb.from("profiles").select("role").eq("id", uid).limit(1);
       let role = Array.isArray(data) && data.length ? data[0]?.role : null;
-      if (!role) {
-        const r2 = await sb.from("profiles").select("role").eq("user_id", uid).limit(1);
-        role = Array.isArray(r2.data) && r2.data.length ? r2.data[0]?.role : null;
-      }
       const isVendor = role === "vendor" || role === "supplier";
       setRoleText(role === "company" ? "Empresa" : isVendor ? "Fornecedor" : "—");
-    } catch (e) { console.warn("[role] erro:", e); setRoleText("—"); }
+    } catch { setRoleText("—"); }
   }
 
   // ==========================================================
-  // Escolha de perfil (modalRole) — grava role e abre dados
+  // Escolha de perfil (modalRole)
   // ==========================================================
   function wireRoleChooser(session) {
     const modalRole   = $("modalRole");
@@ -122,22 +124,18 @@
       try {
         const uid = session?.user?.id;
         if (!uid) return;
-        btnCompany.disabled = true;
-        btnVendor.disabled = true;
+        btnCompany.disabled = true; btnVendor.disabled  = true;
 
         const { error } = await sb.from("profiles").update({ role }).eq("id", uid);
         if (error) throw error;
 
-        // Atualiza UI e segue para os dados
         await paintUserRole(session);
         hide(modalRole);
         try { await openOrgModal(); } catch {}
       } catch (e) {
-        console.warn("[role] update error:", e);
         alert("Não foi possível salvar seu perfil. Tente novamente.");
       } finally {
-        btnCompany.disabled = false;
-        btnVendor.disabled = false;
+        btnCompany.disabled = false; btnVendor.disabled  = false;
       }
     };
 
@@ -154,22 +152,19 @@
       if (!modalRole) return;
       if (prof?.role) hide(modalRole);
       else show(modalRole);
-    } catch (e) {
-      console.warn("[modalRole-check] erro:", e);
-    }
+    } catch {}
   }
 
   // ==========================================================
-  // Modal claro: Organização (PJ/CPF): lock por role + prefill
+  // Modal Organização (PJ/CPF)
   // ==========================================================
-  let profileCache = null; // cache do profile
-  let lockedType = null;   // "PJ" quando role=company; null caso contrário
+  let profileCache = null;
+  let lockedType = null;
 
   async function openOrgModal() {
     const modal = $("orgModal");
     if (!modal) return;
 
-    // Carrega profile para decidir lock/preenche
     try {
       const { data: s } = await sb.auth.getSession();
       const uid = s?.session?.user?.id;
@@ -181,58 +176,45 @@
         .maybeSingle();
       if (error) throw error;
       profileCache = data || {};
-    } catch (e) {
-      console.warn("[org] carregar profile:", e);
-      profileCache = {};
-    }
+    } catch (e) { profileCache = {}; }
 
-    // Se perfil é Empresa, trave em PJ
-    lockedType = profileCache?.role === "company" ? "PJ" : null;
+    const docDigits = onlyDigits(profileCache?.document);
+    lockedType = (profileCache?.role === "company" || docDigits.length === 14 || !!profileCache?.company_name) ? "PJ" : null;
 
-    // Aplica travas de UI + marca seleção inicial
     setupOrgTypeUI();
-
-    // Renderiza os campos conforme seleção / lock
     renderOrgFields();
 
-    // Abre modal
     show(modal);
     document.body.classList.add("modal-open");
   }
-
   function closeOrgModal() {
-    const modal = $("orgModal");
-    if (!modal) return;
-    hide(modal);
-    document.body.classList.remove("modal-open");
+    const modal = $("orgModal"); if (!modal) return;
+    hide(modal); document.body.classList.remove("modal-open");
   }
 
   function setupOrgTypeUI() {
     const pj = document.querySelector('input[name="org_type"][value="PJ"]');
     const pf = document.querySelector('input[name="org_type"][value="PF"]');
-    const pfLabel = pf?.closest("label");
+    const pfLabel = pf ? pf.closest("label") : null;
 
-    // Determinar seleção inicial
     let initial = "PJ";
-    const docDigits = String(profileCache?.document || "").replace(/\D+/g, "");
+    const docDigits = onlyDigits(profileCache?.document);
     if (!lockedType) {
       if (docDigits.length === 11) initial = "PF";
       else if (docDigits.length === 14) initial = "PJ";
       else initial = profileCache?.role === "vendor" ? "PF" : "PJ";
-    } else {
-      initial = "PJ"; // lock
-    }
+    } else initial = "PJ";
 
     if (pj) pj.checked = initial === "PJ";
     if (pf) pf.checked = initial === "PF";
 
-    // Se travado: desabilitar PF
     if (lockedType === "PJ") {
-      if (pf) { pf.disabled = true; pf.setAttribute("aria-disabled", "true"); }
-      pfLabel?.classList.add("is-disabled");
+      if (pf) { pf.checked = false; pf.disabled = true; pf.setAttribute("aria-disabled","true"); if (pfLabel) pfLabel.style.pointerEvents = "none"; }
+      if (pj) pj.checked = true;
+      if (pfLabel) pfLabel.classList.add("is-disabled");
     } else {
       if (pf) { pf.disabled = false; pf.removeAttribute("aria-disabled"); }
-      pfLabel?.classList.remove("is-disabled");
+      if (pfLabel) { pfLabel.style.pointerEvents = ""; pfLabel.classList.remove("is-disabled"); }
     }
   }
 
@@ -241,25 +223,23 @@
     if (orgFormWired) return;
     orgFormWired = true;
 
-    const form   = $("orgForm");
+    const form = $("orgForm");
     const cancel = $("btnOrgCancel");
     const xClose = $("orgClose");
 
     form?.addEventListener("change", (e) => {
       const t = e.target;
       if (t && t.name === "org_type") {
-        if (lockedType === "PJ") { setupOrgTypeUI(); return; } // impede trocar quando lock
+        if (lockedType === "PJ") { setupOrgTypeUI(); return; }
         renderOrgFields();
+        applyReadOnlyUI();
       }
     });
 
     cancel?.addEventListener("click", (e) => { e.preventDefault(); closeOrgModal(); });
-    xClose?.addEventListener("click", (e) => { e.preventDefault(); closeOrgModal(); });
+    xClose?.addEventListener("click",  (e) => { e.preventDefault(); closeOrgModal(); });
 
-    form?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      await submitOrgData();
-    });
+    form?.addEventListener("submit", async (e) => { e.preventDefault(); await submitOrgData(); });
   }
 
   function currentOrgType() {
@@ -267,10 +247,7 @@
     return sel?.value === "PF" ? "PF" : "PJ";
   }
 
-  // Evitar autofill “grudando” em labels
-  function noiseName(prefix) {
-    return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
-  }
+  function noiseName(prefix) { return `${prefix}_${Math.random().toString(36).slice(2, 8)}`; }
 
   function renderOrgFields() {
     const box  = $("orgFields");
@@ -278,13 +255,12 @@
     if (!box) return;
 
     const doc = String(profileCache?.document || "");
-    const docDigits = doc.replace(/\D+/g, "");
+    const docDigits = onlyDigits(doc);
 
     if (currentOrgType() === "PJ") {
       const company_name = profileCache?.company_name || "";
       const trade_name   = profileCache?.display_name || "";
       const cnpj         = docDigits.length === 14 ? doc : "";
-
       box.innerHTML = `
         <label>Razão social</label>
         <input id="org_company_name" autocomplete="off" name="${noiseName("company")}" placeholder="Ex.: Acme Ltda" value="${escapeHtml(company_name)}" />
@@ -298,7 +274,6 @@
       const display_name = profileCache?.display_name || "";
       const cpf          = docDigits.length === 11 ? doc : "";
       const linkedin     = profileCache?.linkedin_url || "";
-
       box.innerHTML = `
         <label>Nome completo</label>
         <input id="org_display_name" autocomplete="off" name="${noiseName("name")}" placeholder="Ex.: João da Silva" value="${escapeHtml(display_name)}" />
@@ -309,19 +284,41 @@
       `;
       if (hint) hint.textContent = "Fornecedor PF: aprovação automática nesta etapa.";
     }
+
+    applyReadOnlyUI();
   }
 
-  function escapeHtml(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function applyReadOnlyUI() {
+    const form = $("orgForm"); if (!form) return;
+    const docDigits = onlyDigits(profileCache?.document);
+    const isCompany = profileCache?.role === "company";
+    const pjSubmitted = isCompany && (docDigits.length === 14 || !!profileCache?.company_name);
+    const pfSubmitted = profileCache?.role === "vendor" && !!profileCache?.display_name && docDigits.length === 11;
+    const readOnly = pjSubmitted || pfSubmitted;
+
+    const btn = $("btnOrgSubmit");
+    const btnCancel = $("btnOrgCancel");
+    if (btn) {
+      btn.textContent = readOnly ? "Fechar" : (isCompany ? "Enviar para análise" : "Salvar");
+      btn.type = readOnly ? "button" : "submit";
+      btn.onclick = readOnly ? () => closeOrgModal() : null;
+      btn.removeAttribute("disabled");
+      btn.classList.remove("is-disabled");
+    }
+    if (btnCancel) { btnCancel.removeAttribute("disabled"); btnCancel.classList.remove("is-disabled"); }
+
+    const inputs = form.querySelectorAll("input, select, textarea, fieldset");
+    inputs.forEach((el) => {
+      if (el.id === "btnOrgSubmit" || el.id === "btnOrgCancel" || el.id === "orgClose") return;
+      if (readOnly) { el.setAttribute("disabled", "true"); el.setAttribute("aria-disabled", "true"); }
+      else { el.removeAttribute("disabled"); el.removeAttribute("aria-disabled"); }
+    });
   }
 
   async function submitOrgData() {
-    const type = currentOrgType();
-    const btn  = $("btnOrgSubmit");
-    btn?.setAttribute("disabled", "true");
-    btn?.classList.add("is-disabled");
+    let type = currentOrgType();
+    if (lockedType === "PJ") type = "PJ";
+    const btn  = $("btnOrgSubmit"); if (btn) { btn.setAttribute("disabled", "true"); btn.classList.add("is-disabled"); }
 
     try {
       const { data: s } = await sb.auth.getSession();
@@ -334,43 +331,88 @@
         const trade_name   = $("org_trade_name")?.value?.trim();
         const documentId   = $("org_document")?.value?.trim();
         if (!company_name || !documentId) throw new Error("Preencha Razão social e CNPJ.");
-        patch = {
-          role: "company",
-          company_name,
-          display_name: trade_name || null,
-          document: documentId,
-          profile_review_status: "pending"
-        };
+        patch = { role: "company", company_name, display_name: trade_name || null, document: documentId, profile_review_status: "pending" };
       } else {
         const display_name = $("org_display_name")?.value?.trim();
         const documentId   = $("org_document")?.value?.trim();
         const linkedin_url = $("org_linkedin_url")?.value?.trim();
         if (!display_name || !documentId) throw new Error("Preencha Nome e CPF.");
-        patch = {
-          role: "vendor",
-          display_name,
-          document: documentId,
-          linkedin_url: linkedin_url || null,
-          profile_review_status: "approved"
-        };
+        patch = { role: "vendor", display_name, document: documentId, linkedin_url: linkedin_url || null, profile_review_status: "approved" };
       }
 
       const upd = await sb.from("profiles").update(patch).eq("id", uid);
-      if (upd.error) throw upd.error;
+      if (upd.error) { alert("Supabase recusou a atualização do profile (ver RLS/Policies)."); return; }
 
-      alert("Dados enviados para análise.");
+      alert(type === "PJ" ? "Dados enviados para análise." : "Dados salvos.");
       closeOrgModal();
-
-      // Atualiza checklist e topo
-      try { await paintUserRole({ user: { id: uid } }); } catch {}
-      if (typeof refreshActivationStatus === "function") await refreshActivationStatus();
+      try { await window.renderChecklist?.(); } catch {}
 
     } catch (e) {
-      console.error("[org] submit error:", e);
       alert(e?.message || "Erro ao salvar.");
     } finally {
-      btn?.removeAttribute("disabled");
-      btn?.classList.remove("is-disabled");
+      if (btn) { btn.removeAttribute("disabled"); btn.classList.remove("is-disabled"); }
     }
   }
+
+  // ==========================================================
+  // Modal Financeiro (PIX)
+  // ==========================================================
+  async function openFinModal() {
+    const modal = $("finModal");
+    if (!modal) return;
+
+    try {
+      const { data: s } = await sb.auth.getSession();
+      const uid = s?.session?.user?.id;
+      if (!uid) throw new Error("Sessão inválida.");
+      const { data, error } = await sb.from("profiles").select("pix_key").eq("id", uid).maybeSingle();
+      if (!error && data) $("fin_pix_key").value = data.pix_key || "";
+    } catch {}
+    show(modal);
+    document.body.classList.add("modal-open");
+  }
+  function closeFinModal() {
+    const modal = $("finModal"); if (!modal) return;
+    hide(modal); document.body.classList.remove("modal-open");
+  }
+
+  let finFormWired = false;
+  function wireFinForm() {
+    if (finFormWired) return;
+    finFormWired = true;
+
+    const form = $("finForm");
+    const btnCancel = $("btnFinCancel");
+    const xClose = $("finClose");
+
+    btnCancel?.addEventListener("click", (e)=>{ e.preventDefault(); closeFinModal(); });
+    xClose?.addEventListener("click", (e)=>{ e.preventDefault(); closeFinModal(); });
+
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("btnFinSave");
+      try {
+        btn.disabled = true; btn.classList.add("is-disabled");
+        const key = $("fin_pix_key")?.value?.trim() || null;
+
+        const { data: s } = await sb.auth.getSession();
+        const uid = s?.session?.user?.id;
+        if (!uid) throw new Error("Sessão inválida.");
+        const upd = await sb.from("profiles").update({ pix_key: key }).eq("id", uid);
+        if (upd.error) throw upd.error;
+
+        alert("Chave PIX salva.");
+        closeFinModal();
+        try { await window.renderChecklist?.(); } catch {}
+      } catch (err) {
+        alert("Não foi possível salvar sua chave PIX.");
+      } finally {
+        const btn2 = $("btnFinSave"); btn2.disabled = false; btn2.classList.remove("is-disabled");
+      }
+    });
+  }
+
+  // Expor para debug local se precisar
+  window.openFinModal = openFinModal;
+  window.closeFinModal = closeFinModal;
 })();
