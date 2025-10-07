@@ -1,4 +1,4 @@
-// /assets/js/activation.js — Checklist + Termos (robusto e rápido)
+// /assets/js/activation.js — Checklist + Termos (fix: não reabilitar tudo ao sair do sync)
 (function () {
   const $ = (id) => document.getElementById(id);
 
@@ -41,27 +41,24 @@
     disable(btnAccept, !(chk?.checked && loadedTermsHash && scrolledToEnd));
   }
 
-  // ====== Loading guard (sem sobrescrever estados finais) ======
+  // Loading guard
   function setSyncing(flag) {
     const card = document.querySelector("#activationCard");
-    if (!card) return;
+    const buttons = card?.querySelectorAll("button");
+    const st1 = $("st-dados"), st2 = $("st-termos"), st3 = $("st-fin"), st4 = $("st-docs");
     if (flag) {
-      card.classList.add("is-syncing");
-      // trava interações enquanto sincroniza, memorizando estado anterior
-      card.querySelectorAll("button")?.forEach((b) => {
-        b.dataset._wasDisabled = b.disabled ? "1" : "0";
-        b.disabled = true;
-        b.setAttribute("aria-disabled", "true");
-      });
+      card?.classList.add("is-syncing");
+      buttons?.forEach((b)=>disable(b, true)); // trava tudo enquanto carrega
+      setStatusPill(st1, "Sincronizando…", "st-pending");
+      setStatusPill(st2, "Sincronizando…", "st-pending");
+      setStatusPill(st3, "Sincronizando…", "st-pending");
+      setStatusPill(st4, "Pendente", "st-pending");
+      $("actTotal")?.replaceChildren("4");
+      $("actCount")?.replaceChildren("0");
     } else {
-      card.classList.remove("is-syncing");
-      // volta cada botão para o estado que já estava antes do lock
-      card.querySelectorAll("button")?.forEach((b) => {
-        const was = b.dataset._wasDisabled === "1";
-        b.disabled = was;
-        b.setAttribute("aria-disabled", was ? "true" : "false");
-        delete b.dataset._wasDisabled;
-      });
+      card?.classList.remove("is-syncing");
+      // ⚠️ NÃO reabilita todos os botões aqui.
+      // O estado final de cada botão é aplicado logo abaixo em renderChecklist().
     }
   }
 
@@ -102,32 +99,61 @@
   }
 
   function computeProfileUI(p) {
-    const status   = (p?.status_profile || "").toLowerCase();
-    const approval = (p?.org_approval_status || "").toLowerCase();
-    const done     = !!p?.checklist_profile_done;
-    const review   = (p?.profile_review_status || "").toLowerCase();
-    const docDigits = String(p?.document || "").replace(/\D+/g,"");
-    const pjSubmitted = (p?.role === "company") && (docDigits.length === 14 || !!p?.company_name);
+  const role      = (p?.role || "").toLowerCase();         // company | vendor
+  const status    = (p?.status_profile || "").toLowerCase();
+  const approval  = (p?.org_approval_status || "").toLowerCase();
+  const review    = (p?.profile_review_status || "").toLowerCase();
 
-    const out = { statusPill:{text:"Pendente",cls:"st-pending"}, button:{label:"Preencher",disabled:false}, isDone:false };
-    if (review === "approved" || status === "aprovado" || approval === "aprovado" || done) {
-      out.statusPill = { text:"Concluído", cls:"st-ok" };
-      out.button = { label:"Ver dados", disabled:false };
-      out.isDone = true;
-      return out;
-    }
-    if (review === "pending" || status === "em_analise" || approval === "aguardando" || pjSubmitted) {
-      out.statusPill = { text:"Em análise", cls:"st-pending" };
-      out.button = { label:"Ver dados", disabled:true };
-      return out;
-    }
-    if (review === "rejected" || status === "reprovado" || approval === "reprovado") {
-      out.statusPill = { text:"Pendente", cls:"st-pending" };
-      out.button = { label:"Corrigir", disabled:false };
-      return out;
+  // heurísticas de compatibilidade (legado)
+  const isApproved = review === "approved" || status === "aprovado" || approval === "aprovado";
+  const isPending  = review === "pending"  || status === "em_analise" || approval === "aguardando";
+  const isRejected = review === "rejected" || status === "reprovado"  || approval === "reprovado";
+
+  const out = {
+    statusPill: { text: "Pendente", cls: "st-pending" },
+    button:     { label: "Preencher", disabled: false },
+    isDone:     false,
+  };
+
+  // Caso aprovado (Concluído)
+  if (isApproved) {
+    out.statusPill = { text: "Concluído", cls: "st-ok" };
+    out.isDone = true;
+
+    // Regras por role:
+    if (role === "vendor" || role === "supplier") {
+      // PF: concluído e botão DESABILITADO (apenas ver posteriormente via outra UI, se houver)
+      out.button = { label: "Ver dados", disabled: true };
+    } else if (role === "company") {
+      // PJ: concluído e botão habilitado para visualizar (read-only)
+      out.button = { label: "Ver dados", disabled: false };
+    } else {
+      // fallback neutro
+      out.button = { label: "Ver dados", disabled: true };
     }
     return out;
   }
+
+  // Caso em análise (pendente de aprovação)
+  if (isPending) {
+    out.statusPill = { text: "Em análise", cls: "st-pending" };
+    // Em análise: ninguém edita. Botão desabilitado; label “Ver dados” para manter consistência.
+    out.button = { label: "Ver dados", disabled: true };
+    return out;
+  }
+
+  // Caso reprovado: permitir correção
+  if (isRejected) {
+    out.statusPill = { text: "Pendente", cls: "st-pending" };
+    out.button = { label: "Corrigir", disabled: false };
+    return out;
+  }
+
+  // Fallback (sem envio ainda)
+  out.statusPill = { text: "Pendente", cls: "st-pending" };
+  out.button = { label: "Preencher", disabled: false };
+  return out;
+}
 
   // ======= CHECKLIST =======
   async function renderChecklist() {
@@ -159,30 +185,47 @@
 
       // 1) Dados
       const ui = computeProfileUI(profile);
-      setStatusPill($("st-dados"), ui.statusPill.text, ui.statusPill.cls);
-      const btnDados = $("btnProfile") || $("btn-dados");
-      if (btnDados) btnDados.textContent = ui.button.label;
+setStatusPill($("st-dados"), ui.statusPill.text, ui.statusPill.cls);
+const btnDados = $("btnProfile") || $("btn-dados");
+if (btnDados) {
+  btnDados.textContent = ui.button.label;
+  disable(btnDados, ui.button.disabled);
+}
+
 
       // 2) Termos
       const termosOK = !!profile?.accept_terms_at && Number(profile?.terms_version || 0) >= TERMS.version;
       setStatusPill($("st-termos"), termosOK ? "Concluído" : "Pendente", termosOK ? "st-ok" : "st-pending");
+      disable($("btn-termos"), termosOK); // <- concluído = bloqueado
 
       // 3) Financeiro
-      const finOK = !!profile?.pix_key;
-      setStatusPill($("st-fin"), finOK ? "Concluído" : "Pendente", finOK ? "st-ok" : "st-pending");
+      const isCompany = profile?.role === "company";
+      const descFin = $("desc-fin");
+      const btnFin = $("btn-fin");
+      let finOK = false;
+
+      if (isCompany) {
+        finOK = true;
+        if (descFin) descFin.textContent = "O financeiro é concluído automaticamente para empresas.";
+        if (btnFin) { btnFin.textContent = "Concluído"; disable(btnFin, true); } // <- sempre bloqueado p/ empresa
+        setStatusPill($("st-fin"), "Concluído", "st-ok");
+      } else {
+        finOK = !!profile?.pix_key;
+        if (descFin) descFin.textContent = "Configure para receber/pagar com segurança.";
+        if (btnFin) { btnFin.textContent = finOK ? "Concluído" : "Configurar"; disable(btnFin, finOK); }
+        setStatusPill($("st-fin"), finOK ? "Concluído" : "Pendente", finOK ? "st-ok" : "st-pending");
+      }
 
       // 4) Documentos
       setStatusPill($("st-docs"), "Pendente", "st-pending");
 
+      // contador
       const doneCount = (ui.isDone ? 1 : 0) + (termosOK ? 1 : 0) + (finOK ? 1 : 0);
       $("actTotal")?.replaceChildren("4");
       $("actCount")?.replaceChildren(String(doneCount));
 
-      // Sai do “sync” e aplica disables finais (garante que não reabilita indevidamente)
+      // sai do modo syncing (sem liberar geral)
       setSyncing(false);
-      if (btnDados) disable(btnDados, ui.button.disabled);
-      disable($("btn-termos"), termosOK); // Termos permanecem desabilitados quando OK
-
     } catch (e) {
       console.warn("[checklist] exceção:", e);
       setSyncing(false);
@@ -216,7 +259,6 @@
       disable(btnAccept, true);
       clearUiError();
       try {
-        // 1) Registrar evento (audit)
         const ins = await sb.from("terms_consent_events").insert({
           user_id: uid, role: profile?.role ?? null, locale: TERMS.locale,
           terms_version: TERMS.version, terms_url: TERMS.url, doc_hash: loadedTermsHash,
@@ -224,14 +266,12 @@
         });
         if (ins.error) console.warn("[terms] insert audit error:", ins.error);
 
-        // 2) Atualizar perfil (fonte de verdade do checklist)
         const now = new Date().toISOString();
         const upd = await sb.from("profiles")
           .update({ accept_terms_at: now, terms_version: TERMS.version })
           .eq("id", uid);
         if (upd.error) { uiError("Não foi possível salvar sua aceitação no perfil (RLS UPDATE)."); disable(btnAccept,false); return; }
 
-        // 3) Pinta, fecha e recarrega checklist
         setStatusPill($("st-termos"), "Concluído", "st-ok");
         disable($("btn-termos"), true);
         await sleep(120);

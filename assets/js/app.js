@@ -171,7 +171,7 @@
       if (!uid) throw new Error("Sessão inválida.");
       const { data, error } = await sb
         .from("profiles")
-        .select("role, company_name, display_name, document, linkedin_url")
+        .select("role, company_name, display_name, document, linkedin_url, billing_email, billing_address")
         .eq("id", uid)
         .maybeSingle();
       if (error) throw error;
@@ -257,19 +257,77 @@
     const doc = String(profileCache?.document || "");
     const docDigits = onlyDigits(doc);
 
+    const addr = profileCache?.billing_address || {};
+    const rua = addr?.rua || "";
+    const numero = addr?.numero || "";
+    const complemento = addr?.complemento || "";
+    const bairro = addr?.bairro || "";
+    const cep = addr?.cep || "";
+    const cidade = addr?.cidade || "";
+    const uf = (addr?.uf || "").toUpperCase();
+
     if (currentOrgType() === "PJ") {
       const company_name = profileCache?.company_name || "";
       const trade_name   = profileCache?.display_name || "";
       const cnpj         = docDigits.length === 14 ? doc : "";
+      const billing_email = profileCache?.billing_email || "";
+
+      const ufOptions = [
+        "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
+        "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
+      ].map(sig => `<option value="${sig}" ${sig===uf?"selected":""}>${sig}</option>`).join("");
+
       box.innerHTML = `
         <label>Razão social</label>
         <input id="org_company_name" autocomplete="off" name="${noiseName("company")}" placeholder="Ex.: Acme Ltda" value="${escapeHtml(company_name)}" />
+
         <label>Nome fantasia (opcional)</label>
         <input id="org_trade_name" autocomplete="off" name="${noiseName("trade")}" placeholder="Ex.: Acme" value="${escapeHtml(trade_name)}" />
-        <label>CNPJ</label>
+
+        <label>CNPJ (Matriz)</label>
         <input id="org_document" autocomplete="off" inputmode="numeric" name="${noiseName("cnpj")}" placeholder="00.000.000/0001-00" value="${escapeHtml(cnpj)}" />
+
+        <div class="divider" style="height:8px"></div>
+        <h4 style="margin:8px 0 4px">Endereço fiscal (Matriz)</h4>
+
+        <label>Rua (logradouro)</label>
+        <input id="org_billing_rua" autocomplete="off" placeholder="Ex.: Av. Paulista" value="${escapeHtml(rua)}" />
+
+        <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label>Número</label>
+            <input id="org_billing_numero" autocomplete="off" placeholder="Ex.: 123" value="${escapeHtml(numero)}" />
+          </div>
+          <div>
+            <label>Complemento (opcional)</label>
+            <input id="org_billing_complemento" autocomplete="off" placeholder="Ex.: cj 12" value="${escapeHtml(complemento)}" />
+          </div>
+        </div>
+
+        <label>Bairro</label>
+        <input id="org_billing_bairro" autocomplete="off" placeholder="Ex.: Bela Vista" value="${escapeHtml(bairro)}" />
+
+        <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label>CEP</label>
+            <input id="org_billing_cep" autocomplete="off" inputmode="numeric" placeholder="00.000-000" value="${escapeHtml(cep)}" />
+          </div>
+          <div>
+            <label>Cidade</label>
+            <input id="org_billing_cidade" autocomplete="off" placeholder="Ex.: São Paulo" value="${escapeHtml(cidade)}" />
+          </div>
+        </div>
+
+        <label>UF</label>
+        <select id="org_billing_uf">
+          <option value="">Selecione</option>
+          ${ufOptions}
+        </select>
+
+        <label>E-mail financeiro</label>
+        <input id="org_billing_email" autocomplete="off" placeholder="financeiro@empresa.com.br" value="${escapeHtml(billing_email)}" />
       `;
-      if (hint) hint.textContent = "Pessoa Jurídica: enviaremos para análise após o envio.";
+      if (hint) hint.textContent = "Pessoa Jurídica (Matriz): enviaremos para análise após o envio.";
     } else {
       const display_name = profileCache?.display_name || "";
       const cpf          = docDigits.length === 11 ? doc : "";
@@ -330,8 +388,50 @@
         const company_name = $("org_company_name")?.value?.trim();
         const trade_name   = $("org_trade_name")?.value?.trim();
         const documentId   = $("org_document")?.value?.trim();
+
+        // Novos campos (fiscais)
+        const billing_rua   = $("org_billing_rua")?.value?.trim();
+        const billing_num   = $("org_billing_numero")?.value?.trim();
+        const billing_comp  = $("org_billing_complemento")?.value?.trim() || null;
+        const billing_bairro= $("org_billing_bairro")?.value?.trim();
+        const billing_cep   = ($("org_billing_cep")?.value || "").replace(/\D+/g,"");
+        const billing_cidade= $("org_billing_cidade")?.value?.trim();
+        const billing_uf    = ($("org_billing_uf")?.value || "").toUpperCase();
+        const billing_email = $("org_billing_email")?.value?.trim();
+
         if (!company_name || !documentId) throw new Error("Preencha Razão social e CNPJ.");
-        patch = { role: "company", company_name, display_name: trade_name || null, document: documentId, profile_review_status: "pending" };
+        // Validações fiscais mínimas
+        if (!billing_rua || !billing_num || !billing_bairro || !billing_cep || !billing_cidade || !billing_uf) {
+          throw new Error("Preencha todos os campos do endereço fiscal.");
+        }
+        if (billing_cep.length !== 8) throw new Error("CEP inválido. Use 8 dígitos.");
+        if (!/^(AC|AL|AM|AP|BA|CE|DF|ES|GO|MA|MG|MS|MT|PA|PB|PE|PI|PR|RJ|RN|RO|RR|RS|SC|SE|SP|TO)$/.test(billing_uf)) {
+          throw new Error("UF inválida.");
+        }
+        if (!billing_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billing_email)) {
+          throw new Error("Informe um e-mail financeiro válido.");
+        }
+
+        const billing_address = {
+          rua: billing_rua,
+          numero: billing_num,
+          complemento: billing_comp,
+          bairro: billing_bairro,
+          cep: billing_cep,
+          cidade: billing_cidade,
+          uf: billing_uf
+        };
+
+        // Monta patch da Empresa (Matriz)
+        patch = {
+          role: "company",
+          company_name,
+          display_name: trade_name || null,
+          document: documentId,
+          profile_review_status: "pending",
+          billing_email: billing_email,
+          billing_address: billing_address
+        };
       } else {
         const display_name = $("org_display_name")?.value?.trim();
         const documentId   = $("org_document")?.value?.trim();
@@ -365,8 +465,15 @@
       const { data: s } = await sb.auth.getSession();
       const uid = s?.session?.user?.id;
       if (!uid) throw new Error("Sessão inválida.");
-      const { data, error } = await sb.from("profiles").select("pix_key").eq("id", uid).maybeSingle();
-      if (!error && data) $("fin_pix_key").value = data.pix_key || "";
+      const { data, error } = await sb.from("profiles").select("pix_key, role").eq("id", uid).maybeSingle();
+      if (!error && data) {
+        // Empresa: financeiro concluído automático (não exige ação)
+        if (data.role === "company") {
+          alert("Para Empresas, o financeiro é concluído automaticamente. Não há configuração necessária nesta etapa.");
+          return;
+        }
+        $("fin_pix_key").value = data.pix_key || "";
+      }
     } catch {}
     show(modal);
     document.body.classList.add("modal-open");
