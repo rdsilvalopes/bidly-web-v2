@@ -1,231 +1,198 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Bidly — App</title>
-    <link rel="icon" href="/favicon.ico" />
-    <link rel="stylesheet" href="/assets/css/base.css" />
-    <link rel="stylesheet" href="/assets/css/app.css" />
-    <link rel="stylesheet" href="/assets/css/activation.css?v=2" />
-    <style>.hide{display:none!important}</style>
-  </head>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bidly — App</title>
 
-  <body class="wrap has-topbar">
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div class="container">
-        <a class="brand" href="/index.html" aria-label="Bidly">
-          <span class="logo"></span><span>Bidly</span>
-        </a>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <link rel="stylesheet" href="/assets/css/activation.css" />
 
-        <nav class="nav-desktop" aria-label="Principal">
-          <a href="/index.html#beneficios">Benefícios</a>
-          <a href="/index.html#como-funciona">Como funciona</a>
-          <a href="/index.html#precos">Preços</a>
-          <a href="/index.html#faq">FAQ</a>
-        </nav>
+  <style>
+    /* util mínima p/ fallback */
+    .hide{display:none!important}
+  </style>
+</head>
+<body class="wrap has-topbar">
+
+  <!-- ========== TOPBAR FIXA ==========
+       Altura controlada por --topbar-h em activation.css -->
+  <header class="topbar" role="banner" aria-label="Barra superior">
+    <div class="container">
+      <a class="brand" href="/index.html" aria-label="Bidly">
+        <span class="logo"></span><span>Bidly</span>
+      </a>
+
+      <nav class="nav-desktop" aria-label="Principal">
+        <a href="/index.html#beneficios">Benefícios</a>
+        <a href="/index.html#como-funciona">Como funciona</a>
+        <a href="/index.html#precos">Preços</a>
+        <a href="/index.html#faq">FAQ</a>
+      </nav>
+
+      <div class="actions" data-auth>
+        <span class="muted">
+          Logado como: <b id="userEmail">—</b>
+          <span id="userRoleText"> • Perfil: —</span>
+        </span>
+        <button id="btnOutTop" class="btn">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== CONTEÚDO DO APP ==========
+       (fica ao fundo; a folha de ativação cobre este conteúdo
+       quando estiver visível) -->
+  <main id="appRoot" class="container" aria-live="polite">
+    <!-- Seu conteúdo normal do app -->
+  </main>
+
+  <!-- ========== FOLHA: TERMOS (tela cheia, branca) ========== -->
+  <section id="termsFull" class="sheet sheet--terms hide" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Termos de uso">
+    <div class="sheet__inner">
+      <header class="sheet__header">
+        <h2>Termos de uso</h2>
+        <small>Versão <span id="termsVer">—</span></small>
+      </header>
+
+
+        <!-- CONTADOR -->
+        <div class="act-progress">
+          <span class="act-progress__text">Etapa 0/3</span>
+          <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
+        </div>
+        <!-- /CONTADOR -->
+
+
+
+      <article id="termsBox" class="sheet__scroll" tabindex="0" aria-label="Conteúdo dos termos"></article>
+
+      <footer class="sheet__footer">
+        <label class="agree">
+          <input type="checkbox" id="chkAgree" />
+          <span>Li e concordo com os termos de uso.</span>
+        </label>
 
         <div class="actions">
-          <span class="muted" data-auth>
-            Logado como: <b id="userEmail">—</b>
-            <span id="userRoleText"> • Perfil: —</span>
-          </span>
-
-          <button id="btnOutTop" class="btn hide" data-auth>Sair</button>
-
-          <button class="menu-toggle" aria-expanded="false" aria-label="Abrir menu">
-            <span></span><span></span><span></span>
-          </button>
+          <button id="btnPrintTerms" class="btn link" type="button">Salvar PDF</button>
+          <span class="spacer"></span>
+          <button id="btnCancelTerms" class="btn ghost" type="button">Cancelar</button>
+          <button id="btnAcceptTerms" class="btn primary" type="button" disabled>Aceitar</button>
         </div>
-      </div>
+      </footer>
+    </div>
+  </section>
 
-      <div class="mobile-menu" aria-hidden="true">
-        <nav aria-label="Menu móvel">
-          <a href="/index.html#beneficios" class="mm-link">Benefícios</a>
-          <a href="/index.html#como-funciona" class="mm-link">Como funciona</a>
-          <a href="/index.html#precos" class="mm-link">Preços</a>
-          <a href="/index.html#faq" class="mm-link">FAQ</a>
-          <div class="mm-actions hide" data-auth>
-            <button id="btnOutMobile" class="btn ghost mm-btn">Sair</button>
-          </div>
-        </nav>
-      </div>
+ <!-- ========== FOLHA: DADOS DA ORGANIZAÇÃO (Empresa) ========== -->
+<section id="orgFull" class="sheet sheet--org hide" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Dados da organização">
+  <div class="sheet__inner">
+    <header class="sheet__header">
+      <h2>Dados da organização</h2>
     </header>
 
-    <!-- CONTEÚDO -->
-    <section class="card card-pad activation-card" id="activationCard">
-      <div class="head">
-        <div class="activation-title">Ativação da conta</div>
-        <div class="activation-progress"><span id="actCount">0</span> / <span id="actTotal">4</span> concluídos</div>
+    <div class="sheet__scroll">
+      <!-- CONTADOR -->
+      <div class="act-progress">
+        <span class="act-progress__text">Etapa 0/3</span>
+        <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
+      </div>
+      <!-- /CONTADOR -->
+
+  <form id="orgForm" class="org-form" autocomplete="off">
+    <div class="org__grid">
+        <!-- 1) CNPJ -->
+        <div class="col-6">
+          <label class="label" for="org_cnpj">CNPJ</label>
+          <input id="org_cnpj" class="input" placeholder="00.000.000/0001-00" inputmode="numeric" />
+        </div>
+
+        <!-- 2) Razão social -->
+        <div class="col-6">
+          <label class="label" for="org_name">Razão social</label>
+          <input id="org_name" class="input" placeholder="Ex.: Acme Ltda" />
+        </div>
+
+        <!-- 3) Nome fantasia -->
+        <div class="col-6">
+          <label class="label" for="org_trade">Nome fantasia</label>
+          <input id="org_trade" class="input" placeholder="Ex.: Acme" />
+        </div>
+
+        <!-- 4) Logradouro -->
+        <div class="col-6">
+          <label class="label" for="org_address">Logradouro</label>
+          <input id="org_address" class="input" placeholder="Rua/Avenida" />
+        </div>
+
+        <!-- 5) Número -->
+        <div class="col-3">
+          <label class="label" for="org_number">Número</label>
+          <input id="org_number" class="input" placeholder="Ex.: 123 ou 123A" />
+        </div>
+
+        <!-- 6) Complemento -->
+        <div class="col-9">
+          <label class="label" for="org_complement">Complemento</label>
+          <input id="org_complement" class="input" placeholder="Ex.: Bloco B, Sala 402" />
+        </div>
+
+        <!-- 7) Estado (UF) -->
+        <div class="col-3">
+          <label class="label" for="org_uf">Estado (UF)</label>
+          <input id="org_uf" class="input" placeholder="UF" maxlength="2" />
+        </div>
+
+        <!-- 8) Cidade -->
+        <div class="col-9">
+          <label class="label" for="org_city">Cidade</label>
+          <input id="org_city" class="input" placeholder="Cidade" />
+        </div>
       </div>
 
-      <ul class="activation-list">
-        <!-- 1) Dados -->
-        <li class="activation-item" id="row-dados">
-          <div class="badge">1</div>
-          <div class="info">
-            <div class="title">Dados do perfil</div>
-            <div class="desc" id="desc-dados">Complete as informações básicas para operar.</div>
-          </div>
-          <span class="status st-pending" id="st-dados">Pendente</span>
-          <button class="btn outline sm" id="btn-dados">Preencher</button>
-        </li>
-
-        <!-- 2) Termos -->
-        <li class="activation-item" id="row-termos">
-          <div class="badge">2</div>
-          <div class="info">
-            <div class="title">Termos de uso</div>
-            <div class="desc">É necessário aceitar os termos para continuar.</div>
-          </div>
-          <span class="status st-pending" id="st-termos">Pendente</span>
-          <button class="btn outline sm" id="btn-termos">Ler & aceitar</button>
-        </li>
-
-        <!-- 3) Financeiro -->
-        <li class="activation-item" id="row-fin">
-          <div class="badge">3</div>
-          <div class="info">
-            <div class="title">Financeiro</div>
-            <div class="desc" id="desc-fin">Configure para receber/pagar com segurança.</div>
-          </div>
-          <span class="status st-pending" id="st-fin">Pendente</span>
-          <button class="btn outline sm" id="btn-fin">Configurar</button>
-        </li>
-
-        <!-- 4) Documentos -->
-        <li class="activation-item" id="row-docs">
-          <div class="badge">4</div>
-          <div class="info">
-            <div class="title">Documentos</div>
-            <div class="desc">Envio e verificação de documentos (em breve).</div>
-          </div>
-          <span class="status st-pending" id="st-docs">Pendente</span>
-          <button class="btn outline sm" id="btn-docs" disabled aria-disabled="true" title="Em breve">Em breve</button>
-        </li>
-      </ul>
-    </section>
-
-    <section id="bootError" class="card card-pad hide" style="max-width:980px; margin:16px auto"></section>
-
-    <!-- Modal role -->
-    <div id="modalRole" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalRoleTitle">
-      <div class="modal__box">
-        <h3 id="modalRoleTitle" style="margin:0 0 8px">Como você quer usar a Bidly?</h3>
-        <p class="muted" style="margin:0 0 16px">Escolha para continuar. (Você pode solicitar mudança depois com nosso suporte.)</p>
-        <div class="modal__actions">
-          <button id="btnRoleCompany" class="btn">Sou Empresa</button>
-          <button id="btnRoleVendor"  class="btn outline">Sou Fornecedor</button>
+      <div class="sheet__footer">
+        <small class="muted">Pessoa Jurídica: enviaremos para análise após o envio.</small>
+        <div class="actions">
+          <span class="spacer"></span>
+          <button id="btnOrgCancel" class="btn ghost" type="button">Cancelar</button>
+          <button class="btn primary" type="submit">Salvar</button>
         </div>
       </div>
-    </div>
+    </form>
+  </div>
+</section>
 
-    <!-- Modal organização -->
-    <div id="orgModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
-      <div class="modal-dialog" role="document" aria-labelledby="orgTitle">
-        <div class="modal-header">
-          <h3 id="orgTitle">Dados da organização</h3>
-          <button class="icon" id="orgClose" aria-label="Fechar" title="Fechar">×</button>
-        </div>
+  
+  <!-- ========== SCRIPTS ========== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+  <script src="/assets/js/supa.js?v=1"></script>
+  <script src="/assets/js/app.js?v=ORG13"></script>
+  <script src="/assets/js/activation.js?"></script>
 
-        <form id="orgForm" class="org-card" autocomplete="off">
-          <div class="org-type">
-            <label class="pill">
-              <input type="radio" name="org_type" value="PJ" checked />
-              <span>Pessoa Jurídica (CNPJ)</span>
-            </label>
-            <label class="pill">
-              <input type="radio" name="org_type" value="PF" />
-              <span>Pessoa Física (CPF)</span>
-            </label>
-          </div>
+  <script>
+    // Botões sair (topo); usam supa.js
+    (async () => {
+      if (!window.connectSupabase || !window.applyAuthUI) return;
+      const sb = await window.connectSupabase();
+      await window.applyAuthUI();
 
-          <div id="orgFields" class="org-fields"></div>
+      const out = document.getElementById('btnOutTop');
+      out?.addEventListener('click', async () => {
+        await window.logoutLocal?.();
+        window.location.href = '/index.html';
+      });
 
-          <div class="modal-actions">
-            <small id="orgHint" class="meta"></small>
-            <div class="spacer"></div>
-            <button type="button" class="btn ghost btn-cancel" id="btnOrgCancel">Cancelar</button>
-            <button type="submit" class="btn primary" id="btnOrgSubmit">Enviar para análise</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal Financeiro (PIX) -->
-    <div id="finModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
-      <div class="modal-dialog" role="document" aria-labelledby="finTitle">
-        <div class="modal-header">
-          <h3 id="finTitle">Financeiro</h3>
-          <button class="icon" id="finClose" aria-label="Fechar" title="Fechar">×</button>
-        </div>
-        <form id="finForm" class="org-card" autocomplete="off">
-          <label>Chave PIX</label>
-          <input id="fin_pix_key" autocomplete="off" placeholder="e-mail, telefone, CPF/CNPJ ou chave aleatória" />
-          <div class="modal-actions">
-            <small class="meta">Utilizamos sua chave para receber e realizar repasses.</small>
-            <div class="spacer"></div>
-            <button type="button" class="btn ghost btn-cancel" id="btnFinCancel">Cancelar</button>
-            <button type="submit" class="btn primary" id="btnFinSave">Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal Termos -->
-    <div id="termsModal" class="modal hide" aria-hidden="true" role="dialog" aria-modal="true">
-      <div class="modal-dialog" role="document" aria-labelledby="termsTitle">
-        <div class="modal-header">
-          <h3 id="termsTitle">Termos de uso</h3>
-          <button class="icon" data-close="1" aria-label="Fechar" title="Fechar">×</button>
-        </div>
-
-        <div class="terms-card">
-          <div class="terms-box" id="termsBox"></div>
-
-          <label class="agree" for="chkAgree">
-            <input type="checkbox" id="chkAgree" />
-            <span>Li e concordo com os termos de uso.</span>
-          </label>
-
-          <small id="scrollHint" class="muted">Role até o fim do documento para habilitar “Aceitar”.</small>
-        </div>
-
-        <div class="modal-actions">
-          <span id="termsMeta" class="meta"></span>
-          <button id="btnPrintTerms" type="button" class="btn link">Salvar PDF</button>
-          <div class="spacer"></div>
-          <button type="button" class="btn ghost btn-cancel" id="btnCancelTerms">Cancelar</button>
-          <button id="btnAcceptTerms" type="button" class="btn primary" disabled>Aceitar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- SCRIPTS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
-    <script src="/assets/js/supa.js?v=1"></script>
-    <script src="/assets/js/app.js?v=ORG10"></script>
-    <script src="/assets/js/activation.js?v=CHK12"></script>
-
-    <!-- Menu móvel -->
-    <script>
-      (function () {
-        const btn = document.querySelector(".menu-toggle");
-        const mobile = document.querySelector(".mobile-menu");
-        if (!btn || !mobile) return;
-        const open = () => { document.body.classList.add("menu-open"); btn.classList.add("is-open"); btn.setAttribute("aria-expanded", "true"); mobile.setAttribute("aria-hidden", "false"); };
-        const close = () => { document.body.classList.remove("menu-open"); btn.classList.remove("is-open"); btn.setAttribute("aria-expanded", "false"); mobile.setAttribute("aria-hidden", "true"); };
-        btn.addEventListener("click", () => document.body.classList.contains("menu-open") ? close() : open());
-        mobile.addEventListener("click", (e) => { if (e.target.classList.contains("mm-link")) close(); });
-        window.addEventListener("keyup", (e) => { if (e.key === "Escape") close(); });
-        window.addEventListener("resize", () => { if (window.innerWidth > 900) close(); });
-      })();
-    </script>
-
-    <!-- Sombra topbar -->
-    <script>
-      (function(){const t=document.querySelector(".topbar");if(!t)return;const s=()=>t.classList.toggle("is-scrolled",window.scrollY>4);s();window.addEventListener("scroll",s,{passive:!0});})();
-    </script>
-  </body>
+      // Mostra papel no topo, se disponível
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          const { data } = await sb.from('profiles').select('role,email').eq('id', user.id).single();
+          document.getElementById('userEmail').textContent = data?.email || user.email;
+          document.getElementById('userRoleText').textContent = data?.role ? ` • Perfil: ${data.role === 'company' ? 'Empresa' : 'Fornecedor'}` : '';
+        }
+      } catch { /* ignore */ }
+    })();
+  </script>
+</body>
 </html>
