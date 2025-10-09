@@ -1,239 +1,167 @@
-/* ===== Modal genérico ===== */
-.modal{
-  position:fixed;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background:rgba(7,12,22,.6);
-  z-index:9999; /* ↑↑ mantêm acima do header/nav */
-  padding:24px;
-}
-.modal[aria-hidden="false"]{display:flex}
-body.modal-open{overflow:hidden}
-
-/* ===== Checklist de ativação (base) ===== */
-.activation-card{max-width:980px;margin:28px auto}
-.activation-card .head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
-.activation-title{font-weight:800;font-size:20px;line-height:1.35;color:#e8eefb}
-.activation-progress{font-size:15px;color:#cfe3ff}
-.activation-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
-.activation-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
-.activation-item .badge{min-width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;background:rgba(56,189,248,.12);color:#86d5ff;font-size:14px}
-.activation-item .info{flex:1}
-.activation-item .title{font-weight:700;color:#e8eefb;font-size:19.5px}
-.activation-item .desc{color:#d7e9ff;font-size:18.5px;line-height:1.5}
-.activation-item .status{font-size:16.5px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12)}
-.st-ok{color:#bff5df;border-color:#2dd4bf}
-.st-pending{color:#ffe9b6;border-color:#fbbf24}
-.st-missing{color:#ffd1d1;border-color:#f87171}
-.btn.sm{height:40px;padding:0 14px;font-size:15px}
-.btn.sm:focus-visible,.activation-item .status:focus-visible{outline:2px solid #89c6ff;outline-offset:2px}
-@media (max-width:640px){
-  .activation-card .head{flex-direction:column;align-items:flex-start}
-  .activation-item{padding:16px}
-  .activation-item .badge{min-width:30px;height:30px;font-size:15px}
-  .activation-item .title{font-size:17px}
-  .activation-item .desc{font-size:15px}
-  .btn.sm{height:44px;padding:0 16px;font-size:16px}
-}
-.btn[disabled],.btn[aria-disabled="true"],.btn.is-disabled{opacity:.6;pointer-events:none;cursor:default}
-
-/* ===== Termos de uso — Tema claro só no modal ===== */
-#termsModal{
-  --tm-bg:#fff;           /* fundo */
-  --tm-fg:#111827;        /* texto */
-  --tm-muted:#4b5563;     /* ícones/detalhes */
-  --tm-border:#e5e7eb;    /* linhas */
-  --tm-surface:#f8fafc;   /* rodapé */
-  --tm-link:#1d4ed8;      /* links */
-  --tm-primary:#2563eb;   /* aceitar */
-
-  /* padding do overlay com safe-area (iOS/Android) */
-  --overlay-pad-y: calc(48px + env(safe-area-inset-top));
-  padding: var(--overlay-pad-y) 24px;
+/* ===== Variáveis / Base ===== */
+:root{
+  --topbar-h: 64px;          /* altura do menu */
+  --sheet-bg: #fff;
+  --sheet-fg: #111;
+  --sheet-pad: 20px;
+  --sheet-maxw: 1200px;
+  --muted: #6b7280;
+  --border: rgba(0,0,0,.14);
 }
 
-/* Diálogo: largura, layout, cantos e overflow */
-#termsModal .modal-dialog{
-  background:var(--tm-bg); color:var(--tm-fg);
-  border:1px solid var(--tm-border); border-radius:16px;
-  box-shadow:0 24px 64px rgba(0,0,0,.18);
-  width:min(760px,94vw);
-  max-height: calc(100vh - (var(--overlay-pad-y) * 2)); /* compensa a folga do overlay */
-  display:flex; flex-direction:column; overflow:hidden;
+/* ===== Topbar fixa no topo ===== */
+.topbar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  background: #0f172a; /* mesma do tema */
+  z-index: 50;
+  box-shadow: 0 1px 0 rgba(255,255,255,.05);
 }
-
-/* Cabeçalho “sticky” */
-#termsModal .modal-header{
-  position:sticky; top:0; z-index:2;
-  display:flex; align-items:center; justify-content:center;
-  padding:14px 48px 14px 18px;
-  background:var(--tm-bg); border-bottom:1px solid var(--tm-border);
-  font-weight:800;
+.topbar .container{
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
 }
-#termsModal .modal-header .icon{
-  position:absolute; top:8px; right:10px;
-  width:36px;height:36px; line-height:36px; font-size:22px;
-  border:0;border-radius:10px;background:transparent;color:var(--tm-muted);cursor:pointer;
+.topbar .actions .btn{ padding:10px 16px; border-radius:12px; }
+
+/* Conteúdo padrão começa após a topbar */
+.wrap.has-topbar main{ padding-top: calc(var(--topbar-h) + 12px); }
+
+/* ===== Folhas (tela cheia) ===== */
+.sheet{
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0; right: 0; bottom: 0;
+  background: var(--sheet-bg);
+  color: var(--sheet-fg);
+  z-index: 40;
+  overflow: hidden; /* scroll na inner */
 }
-#termsModal .modal-header .icon:hover{background:#f3f4f6;color:var(--tm-fg)}
-
-/* Área rolável do conteúdo */
-#termsModal .terms-card{flex:1; overflow:auto; padding:0 18px; background:var(--tm-bg)}
-#termsModal .terms-box{
-  background:#fff; color:#111827;
-  border:1px solid #e5e7eb; border-radius:8px;
-  padding:16px; max-height:none; overflow:visible;
-  scrollbar-gutter:stable;
+.sheet__inner{
+  height: 100%;
+  width: 100%;
+  max-width: var(--sheet-maxw);
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
 }
-#termsModal .terms-box > :first-child{margin-top:0!important}
-
-/* Hierarquia de texto do documento */
-#termsModal .terms-box h1{font-size:22px;font-weight:800;margin:6px 0 10px}
-#termsModal .terms-box h2{font-size:18px;font-weight:800;margin:14px 0 8px}
-#termsModal .terms-box h3{font-size:16px;font-weight:700;margin:12px 0 6px}
-#termsModal .terms-box p{margin:0 0 10px}
-#termsModal .terms-box ul,#termsModal .terms-box ol{margin:8px 0 12px;padding-left:22px}
-#termsModal .terms-box a{color:var(--tm-link);text-decoration:underline}
-#termsModal .terms-box::-webkit-scrollbar{width:10px}
-#termsModal .terms-box::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:999px}
-
-/* Checkbox de concordância */
-#termsModal .agree{display:flex;align-items:center;gap:8px;margin:12px 0 8px}
-#termsModal .agree input{width:18px;height:18px}
-#termsModal .agree span{font-size:15px}
-
-/* Rodapé fixo */
-#termsModal .modal-actions{
-  position:sticky; bottom:0; z-index:2;
-  display:flex; align-items:center; gap:14px;
-  padding:15px 18px;
-  background:var(--tm-surface); border-top:1px solid var(--tm-border);
+.sheet__header{
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 18px var(--sheet-pad) 10px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
 }
-#termsModal .modal-actions .spacer{flex:1}
-
-
-/* Botões (Termos + Organização) */
-#termsModal button,
-#orgModal  button {
-  height: 44px;
-  border-radius: 12px;
-  font-weight: 600;
+.sheet__header h2{ font-size: 24px; font-weight: 700; }
+.sheet__header small{ color: var(--muted); }
+.sheet__scroll{
+  overflow: auto;
+  padding: 16px var(--sheet-pad) 24px;
 }
+.sheet__scroll:focus{ outline: none; }
+.sheet__footer{
+  border-top: 1px solid rgba(0,0,0,.06);
+  padding: 16px var(--sheet-pad);
+  display: flex; align-items: center; gap: 12px;
+}
+.sheet__footer .actions{
+  display: flex; align-items: center; gap: 10px; width: 100%;
+}
+.sheet__footer .spacer{ flex: 1; }
+.agree{ display:flex; align-items:center; gap:8px; color:#111; }
+.agree input{ transform: translateY(1px); }
 
-/* Primário (apenas Termos hoje) */
-#termsModal #btnAcceptTerms {
-  background: var(--tm-primary);
-  border: 1px solid var(--tm-primary);
-  color: #fff;
+/* ===== Termos ===== */
+.terms__box{
+  height: 62vh;
+  overflow: auto;
+  border: 1px solid rgba(16,24,40,.12);
+  border-radius: 10px;
+  background: #fff;
+  padding: 18px;
 }
-#termsModal #btnAcceptTerms:hover:not(:disabled) { filter: brightness(.95); }
-#termsModal #btnAcceptTerms:disabled {
-  background: #c7d2fe;
-  border-color: #c7d2fe;
-  color: #fff;
-  opacity: .85;
-  cursor: not-allowed;
-}
+.terms__meta{ display:flex; align-items:center; gap:16px; margin-top:12px; }
 
-/* Cancelar (compartilhado pelos 2 modais) */
-#termsModal .btn-cancel,
-#orgModal  .btn-cancel {
-  background: #f3f4f6;
-  border: 1px solid var(--tm-border);
-  color: var(--tm-fg);
-  opacity: 1;                 /* não fique “apagado” */
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+/* ===== Organização (Empresa) ===== */
+.org-form .grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 16px var(--sheet-pad) 20px;
 }
-#termsModal .btn-cancel:hover,
-#orgModal  .btn-cancel:hover {
-  filter: brightness(.97);     /* “acende” levemente */
+.org-form label{
+  display:flex; flex-direction:column; gap:6px;
+}
+.org-form input{
+  height: 46px;
+  padding: 10px 12px;
+  border:1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  width: 100%;
+  background: #fff;
+}
+.org-form input.is-invalid{
+  border-color: #d92c2c;
+  box-shadow: 0 0 0 3px rgba(217,44,44,.08);
+}
+.muted{ color: var(--muted); }
+
+/* ===== Botões ===== */
+.btn{ cursor:pointer; border:0; padding:12px 16px; border-radius:12px; font-weight:600; }
+.btn.primary{ background:#5065ff; color:#fff; }
+.btn.ghost{ background:#fff; color:#253046; border:1px solid rgba(0,0,0,.18); }
+.btn.link{ background:transparent; text-decoration: underline; }
+.btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* Utilidade */
+.hide{ display:none !important; }
+
+/* realce de validação leve (sem quebrar o tema) */
+.org-form input.is-invalid{
+  border-color:#d92c2c !important;
+  box-shadow:0 0 0 3px rgba(217,44,44,.08);
 }
 
 
+/* --- Progressinho de etapas (contador + barra) --- */
+.act-progress{display:flex;align-items:center;gap:12px;margin-top:6px}
+.act-progress__text{font-size:13px;color:#6b7280;white-space:nowrap}
+.act-progress__bar{flex:1;height:6px;background:rgba(0,0,0,.08);border-radius:999px;overflow:hidden}
+.act-progress__fill{height:100%;width:0%;background:#4463f7;transition:width .2s ease}
 
 
-/* Link “Baixar PDF” com aparência de âncora */
-#btnPrintTerms{
-  background:transparent;border:0;height:auto;padding:0;
-  color:var(--tm-link);text-decoration:underline;font-weight:600;cursor:pointer
-}
-#btnPrintTerms:hover{text-decoration:none;color:#1e40af}
-#btnPrintTerms:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
-#btnPrintTerms[disabled]{color:#9ca3af;text-decoration:none;cursor:not-allowed}
 
-/* ===== Impressão: só o conteúdo dos termos ===== */
-@media print{
-  body *{visibility:hidden!important}
-  #termsModal,#termsModal *{visibility:visible!important}
-  #termsModal{position:static!important;inset:auto!important;background:#fff!important}
-  #termsModal .modal-header,#termsModal .modal-actions{display:none!important}
-  #termsModal .modal-dialog{box-shadow:none!important;border:none!important;width:auto!important;max-width:none!important;margin:0!important;padding:0 24px!important}
-  #termsModal .terms-card{padding:0!important}
-  #termsModal .terms-box{border:0!important;padding:0!important}
+
+/* Reset tipográfico dentro do conteúdo dos termos */
+.sheet--terms #termsBox {
+  color: #111;
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Ajuste extra para telas muito baixas */
-@media (max-height:680px){
-  #termsModal{ --overlay-pad-y: calc(32px + env(safe-area-inset-top)); }
-  #termsModal .modal-dialog{max-height: calc(100vh - (var(--overlay-pad-y) * 2));}
+/* Remove brilho/efeitos e padroniza títulos */
+.sheet--terms #termsBox h1,
+.sheet--terms #termsBox h2,
+.sheet--terms #termsBox h3 {
+  text-shadow: none !important;
+  filter: none !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #111 !important;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
+.sheet--terms #termsBox h1 { font-size: 28px; font-weight: 700; }
+.sheet--terms #termsBox h2 { font-size: 20px; font-weight: 700; }
+.sheet--terms #termsBox small { color: #6b7280; }
 
-/* ===== Modal "Dados da organização" (tema claro, igual aos Termos) ===== */
-#orgModal{
-  --tm-bg:#fff; --tm-fg:#111827; --tm-muted:#4b5563; --tm-border:#e5e7eb;
-  --tm-surface:#f8fafc; --tm-link:#1d4ed8; --tm-primary:#2563eb;
-  --overlay-pad-y: calc(48px + env(safe-area-inset-top));
-  padding: var(--overlay-pad-y) 24px;
-}
-#orgModal .modal-dialog{
-  background:var(--tm-bg); color:var(--tm-fg);
-  border:1px solid var(--tm-border); border-radius:16px;
-  box-shadow:0 24px 64px rgba(0,0,0,.18);
-  width:min(760px,94vw);
-  max-height: calc(100vh - (var(--overlay-pad-y) * 2));
-  display:flex; flex-direction:column; overflow:hidden;
-}
-#orgModal .modal-header{
-  position:sticky; top:0; z-index:2;
-  display:flex; align-items:center; justify-content:center;
-  padding:14px 48px 14px 18px;
-  background:var(--tm-bg); border-bottom:1px solid var(--tm-border);
-  font-weight:800;
-}
-#orgModal .modal-header .icon{
-  position:absolute; top:8px; right:10px; width:36px;height:36px; line-height:36px;
-  font-size:22px; border:0;border-radius:10px;background:transparent;color:var(--tm-muted);cursor:pointer;
-}
-#orgModal .modal-header .icon:hover{background:#f3f4f6;color:var(--tm-fg)}
-
-#orgModal .org-card{flex:1; overflow:auto; padding:12px 18px 0; background:var(--tm-bg)}
-#orgModal .org-fields label{font-weight:600; display:block; margin:12px 0 6px}
-#orgModal .org-fields input, #orgModal .org-fields select{
-  width:100%; height:44px; border-radius:10px; border:1px solid var(--tm-border);
-  background:#fff; color:#111827; padding:0 12px; outline:none;
-}
-#orgModal .org-fields .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-@media (max-width:640px){ #orgModal .org-fields .row{grid-template-columns:1fr} }
-
-#orgModal .org-type{display:flex; gap:10px; margin:6px 0 8px}
-#orgModal .org-type .pill{display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--tm-border); border-radius:999px; background:#fff; cursor:pointer}
-#orgModal .org-type input{width:18px;height:18px}
-
-#orgModal .modal-actions{
-  position:sticky; bottom:0; z-index:2; display:flex; align-items:center; gap:14px;
-  padding:15px 18px; background:var(--tm-surface); border-top:1px solid var(--tm-border);
-}
-#orgModal .modal-actions .spacer{flex:1}
-#orgModal .btn.primary{background:var(--tm-primary);border:1px solid var(--tm-primary);color:#fff}
-#orgModal .btn.primary:disabled{opacity:.7; cursor:not-allowed}
-
-/* Mensagens de erro simples */
-#orgModal .err{color:#b91c1c; font-size:13.5px; margin-top:4px}
-
-/* Acessibilidade/impressão seguem o padrão dos termos (não precisa duplicar) */
-
-
+/* Garante que nada “empurre” o topo */
+.sheet .sheet__scroll > :first-child { margin-top: 0 !important; }
