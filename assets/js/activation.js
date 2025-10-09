@@ -1,366 +1,303 @@
-// /assets/js/activation.js — Checklist + Termos (fix: não reabilitar tudo ao sair do sync)
-(function () {
-  const $ = (id) => document.getElementById(id);
+/**
+ * activation.js — Fluxo de ativação em TELA INTEIRA (branco), sem modais flutuantes.
+ * Ordem: Termos -> (se empresa) Organização -> (opcional) Documentos -> fim.
+ * - Sem dependência de “gate” ou localStorage.
+ * - Tolerante: se a folha/etapa não existir no DOM, ela é ignorada (não quebra).
+ */
 
-  const TERMS = { version: 4, locale: "pt-BR", url: "/legal/terms/pt-BR/1/terms.html" };
+(async function () {
+  const TAG = "[activation]";
 
-  // ====== UI helpers ======
-  function uiError(msg) {
-    const box = $("bootError");
-    if (!box) return;
-    box.innerHTML = `<b>Ops:</b> ${msg}`;
-    box.classList.remove("hide");
+  // ===== Helpers =====
+  const $  = (s, c = document) => c.querySelector(s);
+  const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
+  const show = (el) => el?.classList?.remove("hide");
+  const hide = (el) => el?.classList?.add("hide");
+
+  // ===== Constantes dos Termos =====
+  const TERMS_VER = 1; // << mude aqui quando trocar a versão
+  const TERMS_URL = `/legal/terms/pt-BR/${TERMS_VER}/terms.html`;
+
+  // ===== Supabase =====
+  if (!window.connectSupabase) {
+    console.warn(`${TAG} supa.js não carregou.`);
+    return;
   }
-  function clearUiError() {
-    const box = $("bootError");
-    if (!box) return;
-    box.innerHTML = "";
-    box.classList.add("hide");
-  }
-  function setStatusPill(el, text, cls) {
-    if (!el) return;
-    el.textContent = text;
-    el.classList.remove("st-ok", "st-pending", "st-missing");
-    if (cls) el.classList.add(cls);
-  }
-  function disable(el, flag = true) {
-    if (!el) return;
-    el.disabled = !!flag;
-    el.setAttribute("aria-disabled", flag ? "true" : "false");
-    el.classList.toggle("is-disabled", !!flag);
-  }
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-  async function sha256(text) {
-    const enc = new TextEncoder().encode(text);
-    const buf = await crypto.subtle.digest("SHA-256", enc);
-    return [...new Uint8Array(buf)].map((b)=>b.toString(16).padStart(2,"0")).join("");
-  }
-  function updateAcceptState() {
-    const chk = $("chkAgree");
-    const btnAccept = $("btnAcceptTerms");
-    disable(btnAccept, !(chk?.checked && loadedTermsHash && scrolledToEnd));
+  const sb = await window.connectSupabase();
+
+  // Sessão e usuário
+  const { data: { user }, error: userErr } = await sb.auth.getUser();
+  if (userErr) { console.error(TAG, userErr); return; }
+  if (!user)    { return; } // não logado
+
+  // ===== Acesso ao perfil =====
+  async function upsertProfileSkeleton() {
+    await sb.from("profiles").upsert(
+      { id: user.id, email: user.email },
+      { onConflict: "id" }
+    );
   }
 
-  // Loading guard
-  function setSyncing(flag) {
-    const card = document.querySelector("#activationCard");
-    const buttons = card?.querySelectorAll("button");
-    const st1 = $("st-dados"), st2 = $("st-termos"), st3 = $("st-fin"), st4 = $("st-docs");
-    if (flag) {
-      card?.classList.add("is-syncing");
-      buttons?.forEach((b)=>disable(b, true)); // trava tudo enquanto carrega
-      setStatusPill(st1, "Sincronizando…", "st-pending");
-      setStatusPill(st2, "Sincronizando…", "st-pending");
-      setStatusPill(st3, "Sincronizando…", "st-pending");
-      setStatusPill(st4, "Pendente", "st-pending");
-      $("actTotal")?.replaceChildren("4");
-      $("actCount")?.replaceChildren("0");
-    } else {
-      card?.classList.remove("is-syncing");
-      // ⚠️ NÃO reabilita todos os botões aqui.
-      // O estado final de cada botão é aplicado logo abaixo em renderChecklist().
-    }
+  async function getProfile() {
+    const { data, error } = await sb
+      .from("profiles")
+      .select(
+        // **APENAS** acrescentamos terms_version aqui
+        "id,email,role,terms_accepted,terms_accepted_at,terms_version,org_submitted,org_type,org_name,org_trade_name,org_document,org_city,org_state,org_zip,org_address,org_number,org_complement,docs_submitted"
+      )
+      .eq("id", user.id)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
-  // ====== estado ======
-  let uid = null, userEmail = null, profile = null;
-  let loadedTermsHash = null, termsRawHtml = "", scrolledToEnd = false;
-
-  async function waitForSupabaseReady() {
-    if (window.sb?.auth) return;
-    await new Promise((resolve) => {
-      let tries = 0;
-      const it = setInterval(() => {
-        tries++;
-        if (window.sb?.auth || tries > 120) { clearInterval(it); resolve(); }
-      }, 50);
-    });
+  async function patchProfile(patch) {
+    const { error } = await sb.from("profiles").update(patch).eq("id", user.id);
+    if (error) throw error;
   }
 
-  document.addEventListener("DOMContentLoaded", initActivation);
+  await upsertProfileSkeleton();
+  let profile = await getProfile();
 
-  async function initActivation() {
+  // ===== Elementos das folhas =====
+  // Termos
+  const termsSheet  = $("#termsFull");
+  const termsBox    = $("#termsBox");
+  const chkAgree    = $("#chkAgree");
+  const btnAccept   = $("#btnAcceptTerms");
+  const btnCancelT  = $("#btnCancelTerms");
+  const btnPrint    = $("#btnPrintTerms");
+  const lblVer      = $("#termsVer");
+  if (lblVer) lblVer.textContent = String(TERMS_VER);
+
+  // Organização (Empresa)
+  const orgSheet     = $("#orgFull");
+  const orgForm      = $("#orgForm");
+  const btnOrgCancel = $("#btnOrgCancel");
+  const inCnpj       = $("#org_cnpj");
+  const inCep        = $("#org_cep");
+  const inCity       = $("#org_city");
+  const inUf         = $("#org_uf");
+  const inAddr       = $("#org_address");
+  const inNumber     = $("#org_number");
+  const inCompl      = $("#org_complement");
+  const inName       = $("#org_name");
+  const inTrade      = $("#org_trade");
+
+  // Documentos (OPCIONAL — pode não existir no HTML)
+  const docsSheet    = $("#docsFull");
+  const btnDocsNow   = $("#btnDocsNow");
+  const btnDocsLater = $("#btnDocsLater");
+
+  // ===== Termos =====
+  async function loadTermsHTML() {
     try {
-      clearUiError();
-      await waitForSupabaseReady();
-      const { data: s, error } = await sb.auth.getSession();
-      if (error) { uiError("Falha ao obter sessão."); return; }
-      const session = s?.session ?? null;
-      uid = session?.user?.id ?? null;
-      userEmail = session?.user?.email ?? null;
-      if (!uid) return;
-
-      await renderChecklist();
-      bindTermsUI();
-    } catch (e) {
-      console.warn("[activation] init error:", e);
-      uiError("Erro de inicialização.");
-    }
-  }
-
-  function computeProfileUI(p) {
-  const role      = (p?.role || "").toLowerCase();         // company | vendor
-  const status    = (p?.status_profile || "").toLowerCase();
-  const approval  = (p?.org_approval_status || "").toLowerCase();
-  const review    = (p?.profile_review_status || "").toLowerCase();
-
-  // heurísticas de compatibilidade (legado)
-  const isApproved = review === "approved" || status === "aprovado" || approval === "aprovado";
-  const isPending  = review === "pending"  || status === "em_analise" || approval === "aguardando";
-  const isRejected = review === "rejected" || status === "reprovado"  || approval === "reprovado";
-
-  const out = {
-    statusPill: { text: "Pendente", cls: "st-pending" },
-    button:     { label: "Preencher", disabled: false },
-    isDone:     false,
-  };
-
-  // Caso aprovado (Concluído)
-  if (isApproved) {
-    out.statusPill = { text: "Concluído", cls: "st-ok" };
-    out.isDone = true;
-
-    // Regras por role:
-    if (role === "vendor" || role === "supplier") {
-      // PF: concluído e botão DESABILITADO (apenas ver posteriormente via outra UI, se houver)
-      out.button = { label: "Ver dados", disabled: true };
-    } else if (role === "company") {
-      // PJ: concluído e botão habilitado para visualizar (read-only)
-      out.button = { label: "Ver dados", disabled: false };
-    } else {
-      // fallback neutro
-      out.button = { label: "Ver dados", disabled: true };
-    }
-    return out;
-  }
-
-  // Caso em análise (pendente de aprovação)
-  if (isPending) {
-    out.statusPill = { text: "Em análise", cls: "st-pending" };
-    // Em análise: ninguém edita. Botão desabilitado; label “Ver dados” para manter consistência.
-    out.button = { label: "Ver dados", disabled: true };
-    return out;
-  }
-
-  // Caso reprovado: permitir correção
-  if (isRejected) {
-    out.statusPill = { text: "Pendente", cls: "st-pending" };
-    out.button = { label: "Corrigir", disabled: false };
-    return out;
-  }
-
-  // Fallback (sem envio ainda)
-  out.statusPill = { text: "Pendente", cls: "st-pending" };
-  out.button = { label: "Preencher", disabled: false };
-  return out;
-}
-
-  // ======= CHECKLIST =======
-  async function renderChecklist() {
-    try {
-      clearUiError();
-      setSyncing(true);
-
-      const { data: s } = await sb.auth.getSession();
-      const session = s?.session ?? null;
-      uid = session?.user?.id ?? uid;
-      userEmail = session?.user?.email ?? userEmail;
-      if (!uid) { setSyncing(false); return; }
-
-      const q1 = await sb
-        .from("profiles")
-        .select(`
-          id, role,
-          status_profile, org_approval_status, checklist_profile_done,
-          profile_review_status,
-          accept_terms_at, terms_version,
-          pix_key,
-          company_name, document
-        `)
-        .eq("id", uid)
-        .maybeSingle();
-
-      if (q1.error) { setSyncing(false); uiError("Não foi possível ler seu perfil (Supabase/RLS)."); return; }
-      profile = q1.data || {};
-
-      // 1) Dados
-      const ui = computeProfileUI(profile);
-setStatusPill($("st-dados"), ui.statusPill.text, ui.statusPill.cls);
-const btnDados = $("btnProfile") || $("btn-dados");
-if (btnDados) {
-  btnDados.textContent = ui.button.label;
-  disable(btnDados, ui.button.disabled);
-}
-
-
-      // 2) Termos
-      const termosOK = !!profile?.accept_terms_at && Number(profile?.terms_version || 0) >= TERMS.version;
-      setStatusPill($("st-termos"), termosOK ? "Concluído" : "Pendente", termosOK ? "st-ok" : "st-pending");
-      disable($("btn-termos"), termosOK); // <- concluído = bloqueado
-
-      // 3) Financeiro
-      const isCompany = profile?.role === "company";
-      const descFin = $("desc-fin");
-      const btnFin = $("btn-fin");
-      let finOK = false;
-
-      if (isCompany) {
-        finOK = true;
-        if (descFin) descFin.textContent = "O financeiro é concluído automaticamente para empresas.";
-        if (btnFin) { btnFin.textContent = "Concluído"; disable(btnFin, true); } // <- sempre bloqueado p/ empresa
-        setStatusPill($("st-fin"), "Concluído", "st-ok");
-      } else {
-        finOK = !!profile?.pix_key;
-        if (descFin) descFin.textContent = "Configure para receber/pagar com segurança.";
-        if (btnFin) { btnFin.textContent = finOK ? "Concluído" : "Configurar"; disable(btnFin, finOK); }
-        setStatusPill($("st-fin"), finOK ? "Concluído" : "Pendente", finOK ? "st-ok" : "st-pending");
-      }
-
-      // 4) Documentos
-      setStatusPill($("st-docs"), "Pendente", "st-pending");
-
-      // contador
-      const doneCount = (ui.isDone ? 1 : 0) + (termosOK ? 1 : 0) + (finOK ? 1 : 0);
-      $("actTotal")?.replaceChildren("4");
-      $("actCount")?.replaceChildren(String(doneCount));
-
-      // sai do modo syncing (sem liberar geral)
-      setSyncing(false);
-    } catch (e) {
-      console.warn("[checklist] exceção:", e);
-      setSyncing(false);
-      uiError("Erro ao renderizar o checklist.");
-    }
-  }
-
-  window.refreshActivationStatus = renderChecklist;
-  window.renderChecklist = renderChecklist;
-
-  // ======= Termos =======
-  function bindTermsUI() {
-    const btnOpen = $("btn-termos");
-    const modal = $("termsModal");
-    const chk = $("chkAgree");
-    const btnAccept = $("btnAcceptTerms");
-    const btnPrint = $("btnPrintTerms");
-    const btnCancel = $("btnCancelTerms");
-
-    if (!btnOpen || !modal || !chk || !btnAccept) return;
-
-    disable(btnPrint, true); disable(btnAccept, true);
-
-    btnOpen.addEventListener("click", async () => { openModal(modal); await loadTermsIntoModal(); });
-    modal.addEventListener("click", (e) => { const t=e.target; if (t instanceof HTMLElement && t.dataset.close==="1") closeModal(modal); });
-    btnCancel?.addEventListener("click", () => closeModal(modal));
-    chk.addEventListener("change", updateAcceptState);
-
-    btnAccept.addEventListener("click", async () => {
-      if (!uid || !loadedTermsHash || !chk.checked || !scrolledToEnd) return;
-      disable(btnAccept, true);
-      clearUiError();
-      try {
-        const ins = await sb.from("terms_consent_events").insert({
-          user_id: uid, role: profile?.role ?? null, locale: TERMS.locale,
-          terms_version: TERMS.version, terms_url: TERMS.url, doc_hash: loadedTermsHash,
-          user_agent: navigator.userAgent ?? null,
-        });
-        if (ins.error) console.warn("[terms] insert audit error:", ins.error);
-
-        const now = new Date().toISOString();
-        const upd = await sb.from("profiles")
-          .update({ accept_terms_at: now, terms_version: TERMS.version })
-          .eq("id", uid);
-        if (upd.error) { uiError("Não foi possível salvar sua aceitação no perfil (RLS UPDATE)."); disable(btnAccept,false); return; }
-
-        setStatusPill($("st-termos"), "Concluído", "st-ok");
-        disable($("btn-termos"), true);
-        await sleep(120);
-        closeModal(modal);
-        await renderChecklist();
-      } catch (e) {
-        uiError("Erro ao salvar a aceitação dos termos.");
-        disable(btnAccept, false);
-      }
-    });
-
-    btnPrint?.addEventListener("click", () => { printTermsAsPdf(); });
-    window.addEventListener("keyup", (e) => { if (e.key === "Escape") closeModal(modal); });
-  }
-
-  async function loadTermsIntoModal() {
-    loadedTermsHash = null; termsRawHtml = ""; scrolledToEnd = false;
-
-    const box = document.querySelector("#termsModal .terms-box");
-    const btnPrint  = $("btnPrintTerms");
-    const metaSpan  = $("termsMeta");
-    const hint      = $("scrollHint");
-
-    if (box) box.innerHTML = "<p>Carregando…</p>";
-    disable(btnPrint, true);
-    const agree = $("chkAgree"); if (agree) agree.checked = false;
-    updateAcceptState();
-    hint?.classList.remove("hide");
-
-    const now = new Date();
-    if (metaSpan) metaSpan.textContent = `Versão ${TERMS.version} • Atualizado em ${now.toLocaleDateString("pt-BR")} • Idioma ${TERMS.locale}`;
-
-    try {
-      const res = await fetch(TERMS.url, { cache: "no-cache" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-
-      termsRawHtml = html;
-      loadedTermsHash = await sha256(html);
-
-      if (box) {
-        box.innerHTML = html;
-        const checkEnd = () => {
-          if (!box) return;
-          const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
-          if (end && !scrolledToEnd) { scrolledToEnd = true; hint?.classList.add("hide"); updateAcceptState(); }
-        };
-        box.addEventListener("scroll", checkEnd, { passive: true });
-        requestAnimationFrame(checkEnd);
-      }
-
-      disable(btnPrint, false);
-      updateAcceptState();
+      const html = await fetch(TERMS_URL, { cache: "no-store" }).then((r) => r.text());
+      if (termsBox) termsBox.innerHTML = html;
     } catch {
-      loadedTermsHash = null; termsRawHtml = "";
-      if (box) box.innerHTML = '<p class="muted">Não foi possível carregar os Termos no momento. Tente novamente.</p>';
+      if (termsBox) termsBox.innerHTML = `<p>Não foi possível carregar os termos agora.</p>`;
     }
   }
 
-  function printTermsAsPdf() {
-    if (!termsRawHtml) return;
-    try {
-      const w = window.open("", "_blank");
-      if (!w) { alert("Permita pop-ups para salvar o PDF."); return; }
-      const when = new Date().toLocaleString("pt-BR");
-      const css = `
-        html,body{background:#fff;color:#111;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;margin:0;padding:24px;}
-        h1{margin:0 0 8px;}
-        .meta{font-size:12px;color:#555;margin-bottom:12px;}
-        hr{border:0;border-top:1px solid #e5e7eb;margin:12px 0 20px;}
-        *{print-color-adjust:exact;-webkit-print-color-adjust:exact;}
-      `;
-      const emailLine = userEmail ? ` • Usuário ${userEmail}` : "";
-      w.document.open();
-      w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Termos de Uso — Bidly</title><style>${css}</style></head><body><h1>Termos de Uso — Bidly</h1><div class="meta">Versão ${TERMS.version} • Atualizado em ${when} • Idioma ${TERMS.locale}${emailLine}</div><hr>${termsRawHtml}</body></html>`);
-      w.document.close(); w.focus(); setTimeout(()=>{ w.print(); w.close(); }, 300);
-    } catch { alert("Não foi possível abrir a impressão."); }
+  function wireTerms() {
+    if (!termsBox) return;
+
+    const setState = () => {
+      const atEnd = (termsBox.scrollTop + termsBox.clientHeight) >= (termsBox.scrollHeight - 2);
+      const agreed = !!chkAgree?.checked;
+      if (btnAccept) btnAccept.disabled = !(atEnd && agreed);
+    };
+
+    // listeners únicos
+    termsBox.addEventListener("scroll", setState, { passive: true });
+    chkAgree?.addEventListener("change", setState);
+    setState(); // estado inicial
+
+    btnPrint?.addEventListener('click', async () => {
+      try {
+        const raw = await fetch(TERMS_URL, { cache: 'no-store' }).then(r => r.text());
+
+        const stamped = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"/>
+<title>Termos de Uso — Bidly</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.45;margin:24px}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #ddd}
+  small{color:#555}
+  @media print{button{display:none}}
+</style></head><body>
+<header><strong>Termos de Uso — Bidly</strong><small>Usuário: ${user?.email ?? '—'}</small></header>
+<main>${raw}</main>
+<script>window.print()</script>
+</body></html>`;
+
+        // Fallback robusto: blob + URL.createObjectURL
+        const blob = new Blob([stamped], { type: 'text/html' });
+        const url  = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener');
+      } catch (e) {
+        console.warn('[terms] Falha ao abrir PDF:', e);
+        // Último fallback: abre o HTML cru (sem carimbo) direto
+        window.open(TERMS_URL, '_blank', 'noopener');
+      }
+    });
+
+    // Configurável: para onde ir ao cancelar termos (mantém tudo o resto intacto)
+    const CANCEL_REDIRECT = '/';   // ajuste se seu app estiver em outra rota
+
+    btnCancelT?.addEventListener('click', () => {
+      hide(termsSheet);               // some com a folha
+      try { window.location.assign(CANCEL_REDIRECT); } catch { /* no-op */ }
+    });
+
+    btnAccept?.addEventListener("click", async () => {
+      try {
+        // **APENAS** acrescentamos terms_version aqui
+        await patchProfile({
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          terms_version: TERMS_VER
+        });
+        profile = await getProfile();
+        hide(termsSheet);
+        await nextStep();
+      } catch (e) {
+        console.error(TAG, "Erro ao aceitar termos:", e);
+      }
+    });
+  } // <<< FECHA wireTerms() AQUI
+
+  // ===== Organização =====
+  function wireOrg() {
+    if (!orgForm) return;
+
+    btnOrgCancel?.addEventListener("click", () => hide(orgSheet));
+
+    // Evita múltiplos binds: sobrescreve o handler
+    orgForm.onsubmit = async (e) => {
+      e.preventDefault();
+
+      const cnpj  = (inCnpj?.value || "").trim();
+      const razao = (inName?.value || "").trim();
+
+      // Validação simples — alerta apenas uma vez por submit
+      if (!cnpj || !razao) {
+        alert("Preencha Razão social e CNPJ.");
+        return;
+      }
+
+      const patch = {
+        role: "company",
+        org_type: "PJ",
+        org_document: cnpj || null,
+        org_zip: (inCep?.value || "").trim() || null,
+        org_city: (inCity?.value || "").trim() || null,
+        org_state: (inUf?.value || "").trim().toUpperCase() || null,
+        org_address: (inAddr?.value || "").trim() || null,
+        org_number: (inNumber?.value || "").trim() || null,
+        org_complement: (inCompl?.value || "").trim() || null,
+        org_name: razao || null,
+        org_trade_name: (inTrade?.value || "").trim() || null,
+        org_submitted: true
+      };
+
+      try {
+        await patchProfile(patch);
+        profile = await getProfile();
+        hide(orgSheet);
+        await nextStep(); // segue para próxima etapa (se existir) ou encerra
+      } catch (err) {
+        console.error(TAG, "Erro ao salvar organização:", err);
+        alert("Não foi possível salvar os dados da organização. Tente novamente.");
+      }
+    };
   }
 
-  function openModal(modal) {
-    modal.classList.remove("hide");
-    modal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
+  // ===== Documentos (opcional) =====
+  function wireDocs() {
+    if (!docsSheet) return; // não existe no DOM -> ignora
+
+    btnDocsNow?.addEventListener("click", async () => {
+      try {
+        await patchProfile({ docs_submitted: true });
+        profile = await getProfile();
+        hide(docsSheet);
+        await nextStep();
+      } catch (e) {
+        console.error(TAG, "Erro ao marcar documentos:", e);
+      }
+    });
+
+    btnDocsLater?.addEventListener("click", async () => {
+      try {
+        await patchProfile({ docs_submitted: true });
+        profile = await getProfile();
+        hide(docsSheet);
+        await nextStep();
+      } catch (e) {
+        console.error(TAG, "Erro ao pular documentos:", e);
+      }
+    });
   }
-  function closeModal(modal) {
-    modal.classList.add("hide");
-    modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-    const chk = $("chkAgree"); if (chk) chk.checked = false;
-    disable($("btnAcceptTerms"), true);
+
+
+
+    // ===== Progresso (contador de etapas) =====
+    function updateProgress() {
+      const total = docsSheet ? 4 : 3;
+      let done = 0;
+      if (profile.terms_accepted === true && Number(profile.terms_version ?? 0) === TERMS_VER) done++;
+      if (profile.org_submitted === true) done++;
+      if (docsSheet && profile.docs_submitted === true) done++;
+
+      // Atualiza texto e barra em todas as folhas existentes
+      $$(".act-progress__text").forEach(el => el.textContent = `Etapa ${done}/${total}`);
+      const percent = Math.round((done / total) * 100);
+      $$(".act-progress__fill").forEach(el => el.style.width = `${percent}%`);
+    }
+
+
+
+
+
+  // ===== Decisor de fluxo =====
+  async function nextStep() {
+     updateProgress(); // entra já sincronizando
+    // 1) Termos pendentes **ou versão diferente**?
+    if (profile.terms_accepted !== true || Number(profile.terms_version ?? 0) !== Number(TERMS_VER)) {
+      await loadTermsHTML();
+      show(termsSheet);
+      hide(orgSheet); hide(docsSheet);
+      updateProgress(); // <<< garante contador certo mesmo na primeira folha
+      return;
+    }
+
+    // 2) Empresa sem organização enviada?
+    if (profile.role === "company" && profile.org_submitted !== true) {
+      hide(termsSheet); show(orgSheet); hide(docsSheet);
+      updateProgress(); // <<< <<< atualiza contador ao abrir Organização
+      return;
+    }
+
+    // 3) Documentos (só entra se a folha existir no DOM)
+    if (docsSheet && profile.docs_submitted !== true) {
+      hide(termsSheet); hide(orgSheet); show(docsSheet);
+      updateProgress(); // <<< idem Documentos
+      return;
+    }
+
+    // 4) Nada a fazer — fecha todas as folhas
+    hide(termsSheet); hide(orgSheet); hide(docsSheet);
+    updateProgress(); // <<< finaliza com barra 100%
   }
-})();
+
+  // ===== Boot =====
+  try {
+    wireTerms();
+    wireOrg();
+    wireDocs();
+    await nextStep();
+  } catch (e) {
+    console.error(TAG, e);
+  }
+})(); // executa a IIFE
