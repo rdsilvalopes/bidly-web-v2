@@ -12,6 +12,11 @@
   const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
   const show = (el) => el?.classList?.remove("hide");
   const hide = (el) => el?.classList?.add("hide");
+  
+  
+  // Normalizadores simples
+  const onlyDigits = (s) => (s || "").replace(/\D/g, "");
+
 
   // ===== Constantes =====
   const TERMS_VER = 1;
@@ -161,96 +166,136 @@
   }
 
   // ===== Organização (Empresa: CNPJ matriz) =====
-  function wireOrg() {
-    if (!orgForm) return;
+function wireOrg() {
+  if (!orgForm) return;
 
-    btnOrgCancel?.addEventListener("click", (e) => {
-      e.preventDefault();
+  btnOrgCancel?.addEventListener("click", (e) => {
+    e.preventDefault();
+    hide(orgSheet);
+    try { window.location.assign(ORG_CANCEL_REDIRECT); } catch {}
+  });
+
+  const showErrors = (items) => {
+    const box = document.getElementById("orgErrors");
+    if (!box) return;
+    if (!items || !items.length) {
+      box.classList.add("hide");
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML = `<strong>Preencha os campos obrigatórios:</strong>
+      <ul>${items.map((t) => `<li>${t}</li>`).join("")}</ul>`;
+    box.classList.remove("hide");
+    try { box.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch {}
+  };
+
+  // (UX) saneia/mascara o CNPJ enquanto digita (só dígitos, até 14)
+  inCnpj?.addEventListener("input", () => {
+    const d = (inCnpj.value || "").replace(/\D/g, "").slice(0, 14);
+    let v = d;
+    if (v.length > 2)  v = v.replace(/^(\d{2})(\d)/, "$1.$2");
+    if (v.length > 6)  v = v.replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2");
+    if (v.length > 10) v = v.replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2");
+    if (v.length > 15) v = v.replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+    inCnpj.value = v;
+  });
+
+  orgForm.onsubmit = async (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation?.();
+    showErrors([]);
+
+    // 1) Coleta
+    const cnpj     = (inCnpj?.value || "").trim();
+    const razao    = (inName?.value || "").trim();
+    const trade    = (inTrade?.value || "").trim();
+    const addr     = (inAddr?.value || "").trim();
+    const number   = (inNumber?.value || "").trim();
+    const uf       = (inUf?.value || "").trim();
+    const city     = (inCity?.value || "").trim();
+    const district = (inDistrict?.value || "").trim();  // se existir no HTML
+    const cep      = (inCep?.value || "").trim();
+
+    // 1.1) Validação dura de formato (exatamente 14 dígitos; barra letras)
+    const cnpjRaw = (cnpj || "").replace(/[.\-\/\s]/g, "");
+    if (!/^\d{14}$/.test(cnpjRaw)) {
+      showErrors(["CNPJ inválido (use 14 dígitos, sem letras)."]);
+      return;
+    }
+
+    // 2) Normaliza (apenas dígitos)
+    const cnpjDigits = onlyDigits(cnpj); // 14
+    const cepDigits  = onlyDigits(cep);  // 8
+
+    // 3) Validação mínima de obrigatórios
+    const missing = [];
+    if (!cnpj)     missing.push("CNPJ");
+    if (!razao)    missing.push("Razão Social");
+    if (!trade)    missing.push("Nome Fantasia");
+    if (!addr)     missing.push("Logradouro");
+    if (!number)   missing.push("Número");
+    if (!uf)       missing.push("Estado (UF)");
+    if (!city)     missing.push("Cidade");
+    if (!cep)      missing.push("CEP");
+    if (inDistrict && !district) missing.push("Bairro"); // só exige se campo existe
+    if (missing.length) { showErrors(missing); return; }
+
+    // 4) Monta patch JÁ normalizado
+    const patch = {
+      role: "company",
+      org_type: "PJ",
+      org_document: cnpjDigits || null,
+      org_zip:      cepDigits  || null,
+      org_city:     city || null,
+      org_state:    (uf || "").toUpperCase() || null,
+      org_address:  addr || null,
+      org_number:   number || null,
+      org_complement: (inCompl?.value || "").trim() || null,
+      org_name:       razao || null,
+      org_trade_name: trade || null,
+      org_submitted:  true,
+    };
+    if (inDistrict) patch.org_district = district || null;
+
+    // 5) Salva com tratamento de erros
+    try {
+      await patchProfile(patch);
+      profile = await getProfile();
+      showErrors([]);
       hide(orgSheet);
-      try { window.location.assign(ORG_CANCEL_REDIRECT); } catch {}
-    });
+      await nextStep();
+    } catch (err) {
+      // Unique violation (CNPJ já existe)
+      const msg   = String(err?.message || "");
+      const isDup =
+        err?.code === "23505" ||
+        /uniq_profiles_cnpj_digits_pj/i.test(msg) ||
+        /duplicate key value/i.test(msg);
 
-    const showErrors = (items) => {
-      const box = document.getElementById('orgErrors');
-      if (!box) return;
-      if (!items || !items.length) {
-        box.classList.add('hide');
-        box.innerHTML = '';
+      if (isDup) {
+        showErrors([
+          "CNPJ já cadastrado. Se você precisa de acesso para essa empresa, entre em contato com o suporte."
+        ]);
         return;
       }
-      box.innerHTML = `<strong>Preencha os campos obrigatórios:</strong>
-        <ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul>`;
-      box.classList.remove('hide');
-      try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}
-    };
 
-    orgForm.onsubmit = async (e) => {
-      e.preventDefault();
-      e.stopImmediatePropagation?.();
-      showErrors([]);
+      // Check de 14 dígitos (caso tenha constraint)
+      const isCheckLen =
+        err?.code === "23514" || /chk_org_document_digits_len/i.test(msg);
 
-      // Coleta dos valores
-      const cnpj     = (inCnpj?.value || "").trim();
-      const razao    = (inName?.value || "").trim();
-      const trade    = (inTrade?.value || "").trim();
-      const addr     = (inAddr?.value || "").trim();
-      const number   = (inNumber?.value || "").trim();
-      const uf       = (inUf?.value || "").trim();
-      const city     = (inCity?.value || "").trim();
-      const district = (inDistrict?.value || "").trim();
-      const cep      = (inCep?.value || "").trim();
-
-      // Normalização (sem obrigar máscara no banco)
-      const cnpjDigits = cnpj.replace(/\D/g, ""); // 14
-      const cepDigits  = cep.replace(/\D/g, "");  // 8
-
-      // Validação (Empresa/PJ)
-      const missing = [];
-      if (!cnpj)     missing.push("CNPJ");
-      if (!razao)    missing.push("Razão Social");
-      if (!trade)    missing.push("Nome Fantasia");
-      if (!addr)     missing.push("Logradouro");
-      if (!number)   missing.push("Número");
-      if (!uf)       missing.push("Estado (UF)");
-      if (!city)     missing.push("Cidade");
-      if (!district) missing.push("Bairro");
-      if (!cep)      missing.push("CEP");
-
-      if (missing.length) { showErrors(missing); return; }
-
-      // Patch (Empresa/PJ — CNPJ matriz)
-      const patch = {
-        role: "company",
-        org_type: "PJ",
-        org_document: cnpjDigits || cnpj || null,
-        org_zip:      cepDigits  || cep  || null,
-        org_city:     city || null,
-        org_state:    (uf || "").toUpperCase() || null,
-        org_address:  addr || null,
-        org_number:   number || null,
-        org_complement: (inCompl?.value || "").trim() || null,
-        org_name:       razao || null,
-        org_trade_name: trade || null,
-        org_district:   district || null,
-        org_submitted:  true
-      };
-
-      try {
-        await patchProfile(patch);
-        profile = await getProfile();
-        showErrors([]);
-        hide(orgSheet);
-        await nextStep();
-      } catch (err) {
-        console.error(TAG, "Erro ao salvar organização:", err);
-        const box = document.getElementById('orgErrors');
-        if (box) {
-          box.innerHTML = `<strong>Não foi possível salvar:</strong><ul><li>${err?.message || "Erro desconhecido"}</li></ul>`;
-          box.classList.remove('hide');
-        }
+      if (isCheckLen) {
+        showErrors(["CNPJ inválido (deve ter 14 dígitos)."]);
+        return;
       }
-    };
-  }
+
+      console.error("[org] patch error:", err);
+      showErrors([msg || "Não foi possível salvar os dados agora."]);
+    }
+  }; // <-- fecha onsubmit
+} // <-- fecha function wireOrg
+
+
+
 
   // ===== Documentos =====
   function wireDocs() {
