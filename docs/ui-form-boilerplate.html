@@ -1,0 +1,62 @@
+
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/ui-forms.css">
+
+
+<section class="u-container">
+  <!-- título + progresso (opcional) -->
+  <header class="u-mb-0">
+    <h2>Dados da organização</h2>
+  </header>
+
+  <!-- GRID 12 colunas -->
+  <form id="meuForm" class="u-form">
+    <div class="u-form__grid u-mt-16">
+
+      <div class="u-col-6">
+        <label class="u-label" for="cnpj">CNPJ</label>
+        <input id="cnpj" class="u-input" placeholder="00.000.000/0001-00" inputmode="numeric">
+      </div>
+
+      <div class="u-col-6">
+        <label class="u-label" for="razao">Razão social</label>
+        <input id="razao" class="u-input" placeholder="Ex.: Acme Ltda">
+      </div>
+
+      <div class="u-col-6">
+        <label class="u-label" for="fantasia">Nome fantasia</label>
+        <input id="fantasia" class="u-input" placeholder="Ex.: Acme">
+      </div>
+
+      <div class="u-col-6">
+        <label class="u-label" for="logradouro">Logradouro</label>
+        <input id="logradouro" class="u-input" placeholder="Rua/Avenida">
+      </div>
+
+      <!-- ... demais campos ... -->
+
+      <!-- BARRA DE AÇÕES: sempre igual -->
+      <div class="u-col-12">
+        <div class="u-actions">
+          <span class="u-spacer"></span>
+          <button type="button" class="u-btn u-btn--ghost" id="btnCancelar">Cancelar</button>
+          <button type="submit" class="u-btn u-btn--primary">Salvar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENSAGENS PADRÃO -->
+    <div class="u-mt-16 u-col-12" id="msgBox" hidden>
+      <div class="u-form__messages">
+        <strong>Preencha os campos obrigatórios:</strong>
+        <ul>
+          <li>CNPJ</li>
+          <li>Razão Social</li>
+          <!-- ... -->
+        </ul>
+      </div>
+    </div>
+
+    <small class="u-muted u-mt-16">Pessoa Jurídica: enviaremos para análise após o envio.</small>
+  </form>
+</section>
