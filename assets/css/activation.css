@@ -114,7 +114,7 @@
 }
 .muted{ color: var(--muted); }
 
-/* ===== Botões ===== */
+/* ===== Botões (base) ===== */
 .btn{ cursor:pointer; border:0; padding:12px 16px; border-radius:12px; font-weight:600; }
 .btn.primary{ background:#5065ff; color:#fff; }
 .btn.ghost{ background:#fff; color:#253046; border:1px solid rgba(0,0,0,.18); }
@@ -130,23 +130,17 @@
   box-shadow:0 0 0 3px rgba(217,44,44,.08);
 }
 
-
 /* --- Progressinho de etapas (contador + barra) --- */
 .act-progress{display:flex;align-items:center;gap:12px;margin-top:6px}
 .act-progress__text{font-size:13px;color:#6b7280;white-space:nowrap}
 .act-progress__bar{flex:1;height:6px;background:rgba(0,0,0,.08);border-radius:999px;overflow:hidden}
 .act-progress__fill{height:100%;width:0%;background:#4463f7;transition:width .2s ease}
 
-
-
-
 /* Reset tipográfico dentro do conteúdo dos termos */
 .sheet--terms #termsBox {
   color: #111;
   font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-
-/* Remove brilho/efeitos e padroniza títulos */
 .sheet--terms #termsBox h1,
 .sheet--terms #termsBox h2,
 .sheet--terms #termsBox h3 {
@@ -158,10 +152,119 @@
   margin-top: 0.25rem;
   margin-bottom: 0.5rem;
 }
-
 .sheet--terms #termsBox h1 { font-size: 28px; font-weight: 700; }
 .sheet--terms #termsBox h2 { font-size: 20px; font-weight: 700; }
 .sheet--terms #termsBox small { color: #6b7280; }
 
 /* Garante que nada “empurre” o topo */
 .sheet .sheet__scroll > :first-child { margin-top: 0 !important; }
+
+/* ===== ORG FORM – layout enxuto ===== */
+
+/* container: 12 colunas, centralizado */
+.sheet--org .org__grid{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0,1fr));
+  gap: 12px 16px;
+  max-width: 960px;
+  margin: 8px auto 20px;
+  padding: 0 var(--sheet-pad);
+}
+.sheet--org .org__grid > *{ min-width: 0; }
+.sheet--org .org__grid > .col-12{ grid-column: span 12; }
+.sheet--org .org__grid > .col-9 { grid-column: span 9;  }
+.sheet--org .org__grid > .col-6 { grid-column: span 6;  }
+.sheet--org .org__grid > .col-3 { grid-column: span 3;  }
+
+/* >>> FAZ O BLOCO DE AÇÕES OCUPAR A LARGURA TODA DA GRADE */
+.sheet--org .org__grid > .actions{
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* mobile empilhado */
+@media (max-width: 768px){
+  .sheet--org .org__grid{
+    grid-template-columns: 1fr;
+    gap: 10px 0;
+    max-width: 100%;
+  }
+  .sheet--org .org__grid > *{ grid-column: 1 / -1; }
+}
+
+/* campos */
+.sheet--org .label{
+  display:block;
+  font-size:14.5px;
+  font-weight:600;
+  margin:4px 0 6px;
+  color:#0b1220;
+}
+.sheet--org .input{
+  height:44px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#fff;
+  font-size:15px;
+  width:100%;
+}
+.sheet--org .input:focus{
+  outline:none;
+  border-color:#4463f7;
+  box-shadow:0 0 0 3px rgba(68,99,247,.12);
+}
+.sheet--org .input.is-invalid{
+  border-color:#d92c2c;
+  box-shadow:0 0 0 3px rgba(217,44,44,.08);
+}
+
+/* barra de ações do formulário (alinhada à direita) */
+.sheet--org #orgForm .actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;   /* direita */
+  gap:12px;
+  margin-top:24px;
+  padding-top:12px;
+  border-top:1px solid rgba(0,0,0,.08);
+}
+.sheet--org #orgForm .actions .spacer{ flex:1; }
+
+/* Botões menores e largura auto */
+.sheet--org #orgForm .actions .btn{
+  height:40px;
+  line-height:40px;
+  padding:0 18px;
+  font-size:14px;
+  border-radius:10px;
+  flex:0 0 auto;
+  width:auto;
+}
+
+/* Ghost com borda no hover/focus */
+.btn.ghost:hover,
+.btn.ghost:focus{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.28);
+  box-shadow:0 0 0 3px rgba(0,0,0,.06);
+  outline:none;
+}
+
+/* rodapé alinhado à largura do formulário */
+.sheet--org #orgForm + .sheet__footer{
+  max-width:960px;
+  margin:0 auto;
+  padding-left: var(--sheet-pad);
+  padding-right: var(--sheet-pad);
+}
+
+/* mensagens de validação */
+.footer-notes{display:flex;flex-direction:column;gap:8px;max-width:520px}
+.form-messages{
+  background:#fdecea;border:1px solid #f3c2bc;color:#842029;
+  border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.35
+}
+.form-messages strong{font-weight:700}
+.form-messages ul{margin:6px 0 0 18px}
+.form-messages.hide{display:none}
