@@ -1,0 +1,196 @@
+/*
+==========================================
+ Bidly UI — Formulário Padrão
+------------------------------------------
+ - Base para qualquer tela de formulário.
+ - Padrão de grid, campos, botões, ações e mensagens.
+ - Usar em todas as folhas (Org, Financeiro, Perfil, etc.)
+------------------------------------------
+ Autor: Rodrigo & ChatGPT (2025)
+==========================================
+*/
+
+
+
+/* ========= TOKENS ========= */
+:root{
+  /* layout */
+  --container-w: 960px;
+  --pad-x: 20px;
+
+  /* cores */
+  --c-bg: #fff;
+  --c-fg: #0b1220;
+  --c-muted: #6b7280;
+  --c-border: rgba(0,0,0,.14);
+  --c-primary: #5963ff;            /* principal */
+  --c-primary-strong: #4b56ff;     /* hover */
+  --c-primary-soft: rgba(89,99,255,.12);
+  --c-danger: #d92c2c;
+  --c-danger-soft: rgba(217,44,44,.10);
+
+  /* raio/altura */
+  --r-10: 10px;
+  --r-12: 12px;
+  --h-input: 44px;                 /* inputs e botões coerentes */
+}
+
+/* ========= CONTAINER ========= */
+.u-container {
+  width: 100%;
+  max-width: var(--container-w);
+  margin: 0 auto;
+  padding: 0 var(--pad-x);
+}
+
+/* ========= TIPOS ========= */
+.u-muted { color: var(--c-muted); }
+
+/* ========= GRID DO FORM ========= */
+.u-form__grid{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0,1fr));
+  gap: 12px 16px;
+}
+.u-col-12{ grid-column: span 12; }
+.u-col-9 { grid-column: span 9;  }
+.u-col-6 { grid-column: span 6;  }
+.u-col-4 { grid-column: span 4;  }
+.u-col-3 { grid-column: span 3;  }
+
+/* mobile empilha */
+@media (max-width: 768px){
+  .u-form__grid{
+    grid-template-columns: 1fr;
+    gap: 10px 0;
+  }
+  .u-form__grid > *{ grid-column: 1 / -1; }
+}
+
+/* ========= CAMPOS ========= */
+.u-label{
+  display:block;
+  margin: 2px 0 6px;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--c-fg);
+}
+
+.u-input,
+.u-select,
+.u-textarea{
+  width: 100%;
+  height: var(--h-input);
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-10);
+  background: var(--c-bg);
+  color: var(--c-fg);
+  font-size: 15px;
+  line-height: 1.2;
+  outline: none;
+}
+.u-textarea{
+  min-height: calc(var(--h-input) * 2.2);
+  resize: vertical;
+}
+
+.u-input:focus,
+.u-select:focus,
+.u-textarea:focus{
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-soft);
+}
+
+/* estado inválido */
+.u-invalid{
+  border-color: var(--c-danger) !important;
+  box-shadow: 0 0 0 3px var(--c-danger-soft);
+}
+
+/* ========= AÇÕES (BARRA DE BOTÕES) ========= */
+.u-actions{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;          /* respiro dos campos */
+  padding-top: 12px;
+  border-top: 1px solid var(--c-border);
+}
+.u-actions .u-spacer{ flex: 1; }   /* empurra para a direita */
+
+/* ========= BOTÕES ========= */
+.u-btn{
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--h-input);
+  padding: 0 18px;
+  border-radius: var(--r-10);
+  border: 1px solid transparent;
+  font-weight: 600;
+  line-height: 1;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease, transform .02s ease;
+}
+
+/* primário */
+.u-btn--primary{
+  background: var(--c-primary);
+  color: #fff;
+}
+.u-btn--primary:hover{ background: var(--c-primary-strong); }
+.u-btn--primary:active{ transform: translateY(1px); }
+
+/* ghost */
+.u-btn--ghost{
+  background: #fff;
+  color: #253046;
+  border-color: var(--c-border);
+}
+.u-btn--ghost:hover,
+.u-btn--ghost:focus{
+  border-color: rgba(0,0,0,.28);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+/* danger opcional (excluir, reset etc.) */
+.u-btn--danger{
+  background: #fff;
+  color: var(--c-danger);
+  border-color: var(--c-danger);
+}
+.u-btn--danger:hover{
+  background: var(--c-danger-soft);
+}
+
+/* desabilitado */
+.u-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ========= MENSAGENS ========= */
+.u-form__messages{
+  background: #fdecea;
+  border: 1px solid #f3c2bc;
+  color: #842029;
+  border-radius: var(--r-10);
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.u-form__messages ul{ margin: 6px 0 0 18px; }
+
+/* ========= UTILIDADES RÁPIDAS ========= */
+.u-mt-0{ margin-top: 0 !important; }
+.u-mt-8{ margin-top: 8px !important; }
+.u-mt-16{ margin-top: 16px !important; }
+.u-mt-24{ margin-top: 24px !important; }
+.u-mb-0{ margin-bottom: 0 !important; }
