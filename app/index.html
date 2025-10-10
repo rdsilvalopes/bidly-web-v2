@@ -8,7 +8,8 @@
   <link rel="icon" href="/favicon.ico" />
   <link rel="stylesheet" href="/assets/css/base.css" />
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <link rel="stylesheet" href="/assets/css/activation.css" />
+  <link rel="stylesheet" href="/assets/css/ui-forms.css">   <!-- utilitário, genérico -->
+  <link rel="stylesheet" href="/assets/css/activation.css"> <!-- regras específicas -->
 
   <style>
     /* util mínima p/ fallback */
@@ -17,8 +18,7 @@
 </head>
 <body class="wrap has-topbar">
 
-  <!-- ========== TOPBAR FIXA ==========
-       Altura controlada por --topbar-h em activation.css -->
+  <!-- ========== TOPBAR FIXA ========== -->
   <header class="topbar" role="banner" aria-label="Barra superior">
     <div class="container">
       <a class="brand" href="/index.html" aria-label="Bidly">
@@ -42,9 +42,7 @@
     </div>
   </header>
 
-  <!-- ========== CONTEÚDO DO APP ==========
-       (fica ao fundo; a folha de ativação cobre este conteúdo
-       quando estiver visível) -->
+  <!-- ========== CONTEÚDO DO APP ========== -->
   <main id="appRoot" class="container" aria-live="polite">
     <!-- Seu conteúdo normal do app -->
   </main>
@@ -57,15 +55,12 @@
         <small>Versão <span id="termsVer">—</span></small>
       </header>
 
-
-        <!-- CONTADOR -->
-        <div class="act-progress">
-          <span class="act-progress__text">Etapa 0/3</span>
-          <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
-        </div>
-        <!-- /CONTADOR -->
-
-
+      <!-- CONTADOR -->
+      <div class="act-progress">
+        <span class="act-progress__text">Etapa 0/3</span>
+        <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
+      </div>
+      <!-- /CONTADOR -->
 
       <article id="termsBox" class="sheet__scroll" tabindex="0" aria-label="Conteúdo dos termos"></article>
 
@@ -85,85 +80,181 @@
     </div>
   </section>
 
- <!-- ========== FOLHA: DADOS DA ORGANIZAÇÃO (Empresa) ========== -->
-<section id="orgFull" class="sheet sheet--org hide" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Dados da organização">
-  <div class="sheet__inner">
-    <header class="sheet__header">
-      <h2>Dados da organização</h2>
-    </header>
+  <!-- ========== FOLHA: DADOS DA ORGANIZAÇÃO (Empresa) ========== -->
+  <section id="orgFull" class="sheet sheet--org hide" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Dados da organização">
+    <div class="sheet__inner">
+      <header class="sheet__header">
+        <h2>Dados da organização</h2>
+      </header>
 
-    <div class="sheet__scroll">
-      <!-- CONTADOR -->
-      <div class="act-progress">
-        <span class="act-progress__text">Etapa 0/3</span>
-        <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
+      <div class="sheet__scroll">
+        <!-- CONTADOR -->
+        <div class="act-progress">
+          <span class="act-progress__text">Etapa 0/3</span>
+          <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
+        </div>
+        <!-- /CONTADOR -->
+
+        <form id="orgForm" class="org-form" autocomplete="off">
+          <div class="org__grid">
+            <!-- 1) CNPJ -->
+            <div class="col-6">
+              <label class="label" for="org_document">CNPJ</label>
+              <input id="org_document" name="org_document" class="input" placeholder="00.000.000/0001-00" inputmode="numeric" />
+            </div>
+
+            <!-- 2) Razão social -->
+            <div class="col-6">
+              <label class="label" for="org_name">Razão social</label>
+              <input id="org_name" name="org_name" class="input" placeholder="Ex.: Acme Ltda" />
+            </div>
+
+            <!-- 3) Nome fantasia -->
+            <div class="col-6">
+              <label class="label" for="org_trade_name">Nome fantasia</label>
+              <input id="org_trade_name" name="org_trade_name" class="input" placeholder="Ex.: Acme" />
+            </div>
+
+            <!-- 4) Logradouro -->
+            <div class="col-6">
+              <label class="label" for="org_address">Logradouro</label>
+              <input id="org_address" name="org_address" class="input" placeholder="Rua/Avenida" />
+            </div>
+
+            <!-- 5) Número -->
+            <div class="col-3">
+              <label class="label" for="org_number">Número</label>
+              <input id="org_number" name="org_number" class="input" placeholder="Ex.: 123 ou 123A" />
+            </div>
+
+            <!-- 6) Complemento -->
+            <div class="col-9">
+              <label class="label" for="org_complement">Complemento</label>
+              <input id="org_complement" name="org_complement" class="input" placeholder="Ex.: Bloco B, Sala 402" />
+            </div>
+
+            <!-- 7) Estado (UF) -->
+            <div class="col-3">
+              <label class="label" for="org_state">Estado (UF)</label>
+              <select id="org_state" name="org_state" class="input">
+                <option value="">Selecione</option>
+                <option value="AC">AC — Acre</option>
+                <option value="AL">AL — Alagoas</option>
+                <option value="AP">AP — Amapá</option>
+                <option value="AM">AM — Amazonas</option>
+                <option value="BA">BA — Bahia</option>
+                <option value="CE">CE — Ceará</option>
+                <option value="DF">DF — Distrito Federal</option>
+                <option value="ES">ES — Espírito Santo</option>
+                <option value="GO">GO — Goiás</option>
+                <option value="MA">MA — Maranhão</option>
+                <option value="MT">MT — Mato Grosso</option>
+                <option value="MS">MS — Mato Grosso do Sul</option>
+                <option value="MG">MG — Minas Gerais</option>
+                <option value="PA">PA — Pará</option>
+                <option value="PB">PB — Paraíba</option>
+                <option value="PR">PR — Paraná</option>
+                <option value="PE">PE — Pernambuco</option>
+                <option value="PI">PI — Piauí</option>
+                <option value="RJ">RJ — Rio de Janeiro</option>
+                <option value="RN">RN — Rio Grande do Norte</option>
+                <option value="RS">RS — Rio Grande do Sul</option>
+                <option value="RO">RO — Rondônia</option>
+                <option value="RR">RR — Roraima</option>
+                <option value="SC">SC — Santa Catarina</option>
+                <option value="SP">SP — São Paulo</option>
+                <option value="SE">SE — Sergipe</option>
+                <option value="TO">TO — Tocantins</option>
+              </select>
+            </div>
+
+            <!-- 8) Cidade -->
+            <div class="col-3">
+              <label class="label" for="org_city">Cidade</label>
+              <input id="org_city" name="org_city" class="input" placeholder="Cidade" />
+            </div>
+
+            <!-- 9) Bairro -->
+            <div class="col-3">
+              <label class="label" for="org_district">Bairro</label>
+              <input id="org_district" name="org_district" class="input" placeholder="Ex.: Centro" />
+            </div>
+
+            <!-- 10) CEP -->
+            <div class="col-3">
+              <label class="label" for="org_zip">CEP</label>
+              <input
+                id="org_zip"
+                name="org_zip"
+                class="input"
+                placeholder="00000-000"
+                inputmode="numeric"
+                maxlength="9"
+              />
+            </div>
+
+            <!-- Ações -->
+            <div class="actions">
+              <span class="spacer"></span>
+              <button id="btnOrgCancel" class="btn ghost" type="button">Cancelar</button>
+              <button class="btn primary" type="submit">Salvar</button>
+            </div>
+          </div>
+
+          <div class="sheet__footer">
+            <div class="footer-notes">
+              <div id="orgErrors" class="form-messages hide" aria-live="polite" role="status"></div>
+              <small class="muted">Pessoa Jurídica: enviaremos para análise após o envio.</small>
+            </div>
+          </div>
+        </form>
       </div>
-      <!-- /CONTADOR -->
+    </div>
+  </section>
 
-  <form id="orgForm" class="org-form" autocomplete="off">
-    <div class="org__grid">
-        <!-- 1) CNPJ -->
-        <div class="col-6">
-          <label class="label" for="org_cnpj">CNPJ</label>
-          <input id="org_cnpj" class="input" placeholder="00.000.000/0001-00" inputmode="numeric" />
+  <!-- ========== FOLHA: DOCUMENTOS DA ORGANIZAÇÃO ========== -->
+  <section id="docsFull" class="sheet sheet--docs hide" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Documentos da organização">
+    <div class="sheet__inner">
+      <header class="sheet__header">
+        <h2>Documentos da organização</h2>
+      </header>
+
+      <div class="sheet__scroll">
+        <!-- CONTADOR -->
+        <div class="act-progress">
+          <span class="act-progress__text">Etapa 0/3</span>
+          <div class="act-progress__bar"><div class="act-progress__fill"></div></div>
         </div>
+        <!-- /CONTADOR -->
 
-        <!-- 2) Razão social -->
-        <div class="col-6">
-          <label class="label" for="org_name">Razão social</label>
-          <input id="org_name" class="input" placeholder="Ex.: Acme Ltda" />
-        </div>
+        <div class="u-mt-16">
+          <p class="u-mb-8">
+            Envie a documentação necessária para verificação do cadastro da sua empresa.
+          </p>
+          <ul class="u-list u-mb-16">
+            <li>Contrato social ou documento constitutivo;</li>
+            <li>Comprovante de endereço da sede;</li>
+            <li>Documento de identificação do responsável legal.</li>
+          </ul>
 
-        <!-- 3) Nome fantasia -->
-        <div class="col-6">
-          <label class="label" for="org_trade">Nome fantasia</label>
-          <input id="org_trade" class="input" placeholder="Ex.: Acme" />
-        </div>
-
-        <!-- 4) Logradouro -->
-        <div class="col-6">
-          <label class="label" for="org_address">Logradouro</label>
-          <input id="org_address" class="input" placeholder="Rua/Avenida" />
-        </div>
-
-        <!-- 5) Número -->
-        <div class="col-3">
-          <label class="label" for="org_number">Número</label>
-          <input id="org_number" class="input" placeholder="Ex.: 123 ou 123A" />
-        </div>
-
-        <!-- 6) Complemento -->
-        <div class="col-9">
-          <label class="label" for="org_complement">Complemento</label>
-          <input id="org_complement" class="input" placeholder="Ex.: Bloco B, Sala 402" />
-        </div>
-
-        <!-- 7) Estado (UF) -->
-        <div class="col-3">
-          <label class="label" for="org_uf">Estado (UF)</label>
-          <input id="org_uf" class="input" placeholder="UF" maxlength="2" />
-        </div>
-
-        <!-- 8) Cidade -->
-        <div class="col-9">
-          <label class="label" for="org_city">Cidade</label>
-          <input id="org_city" class="input" placeholder="Cidade" />
+          <!-- Placeholder da área de upload/listagem (evolui depois) -->
+          <div id="docsPlaceholder" class="u-mt-8 u-muted">
+            Upload dos arquivos será habilitado em breve. Você pode concluir esta etapa agora e enviar depois.
+          </div>
         </div>
       </div>
 
-      <div class="sheet__footer">
-        <small class="muted">Pessoa Jurídica: enviaremos para análise após o envio.</small>
+      <footer class="sheet__footer">
+        <div id="docsErrors" class="form-messages hide" aria-live="polite" role="status"></div>
         <div class="actions">
+          <button id="btnDocsLater" class="btn ghost" type="button">Enviar depois</button>
           <span class="spacer"></span>
-          <button id="btnOrgCancel" class="btn ghost" type="button">Cancelar</button>
-          <button class="btn primary" type="submit">Salvar</button>
+          <button id="btnDocsNow" class="btn primary" type="button">Concluir agora</button>
         </div>
-      </div>
-    </form>
-  </div>
-</section>
+      </footer>
+    </div>
+  </section>
 
-  
   <!-- ========== SCRIPTS ========== -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
   <script src="/assets/js/supa.js?v=1"></script>
