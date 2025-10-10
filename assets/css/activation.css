@@ -276,3 +276,72 @@
   font-size: .9rem;
 }
 
+.doccard {
+  border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px;
+  background: #fff; max-width: 980px; margin: 0 auto;
+}
+.doccard__head { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+.doccard__desc { color:#6b7280; margin:8px 0 12px; }
+.doccard__actions { display:flex; gap:8px; justify-content:flex-end; }
+.pill { padding:2px 8px; border-radius:999px; background:#eef2ff; color:#4338ca; font-size:.85rem; }
+
+
+/* Deixa o card largo e estável */
+.doc-card { max-width: 980px; margin-left: auto; margin-right: auto; }
+/* ou, se preferir ocupar toda a largura do rodapé da sheet */
+.doc-card { max-width: none; width: 100%; }
+
+
+/* ===== DOCS: card largo e estável ===== */
+
+/* o footer dos Docs vira um "container" de bloco (evita encolher em flex) */
+#docsFull .sheet__footer { 
+  display: block;
+}
+
+/* cartão ocupa a largura toda do footer, mas limita no centro */
+#docsFull .doccard {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 18px;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;          /* centraliza */
+}
+
+/* cabeçalho do card: título + status à esquerda; botões à direita */
+#docsFull .doccard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* linha de ações: botões à direita */
+#docsFull .doccard__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* texto auxiliar */
+#docsFull .doccard__desc {
+  color: #6b7280;
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+}
+
+/* pílula de status */
+#docsFull .pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .85rem;
+  line-height: 1.6;
+}
+#docsFull .pill--muted   { background:#f3f4f6; color:#374151; }
+#docsFull .pill--info    { background:#eef2ff; color:#4338ca; }
+#docsFull .pill--success { background:#ecfdf5; color:#065f46; }
+#docsFull .pill--danger  { background:#fef2f2; color:#991b1b; }
