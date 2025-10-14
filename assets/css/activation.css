@@ -345,3 +345,17 @@
 #docsFull .pill--info    { background:#eef2ff; color:#4338ca; }
 #docsFull .pill--success { background:#ecfdf5; color:#065f46; }
 #docsFull .pill--danger  { background:#fef2f2; color:#991b1b; }
+
+/* ===== Uploader ===== */
+.uploader { margin-top: 8px; }
+.uploader__row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.filebadge {
+  display:flex; align-items:center; gap:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px;
+  padding:8px 10px; min-height:40px; min-width:200px;
+}
+.filebadge.is-empty { color:#6b7280; }
+.filebadge__icon { font-size:18px; }
+.filebadge__name { max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.filebadge__meta { color:#6b7280; font-size:.9rem; }
+.uploader__actions { display:flex; gap:8px; }

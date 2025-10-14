@@ -1,0 +1,178 @@
+/* =========================================================
+   Bidly • Admin Lite — “Dados da organização”
+   - labels acima (negrito leve)
+   - grid 2 colunas (1 no mobile)
+   - tokens de espaçamento ajustáveis
+   - estados de leitura/edição consistentes
+   ========================================================= */
+
+/* ===== TOKENS (ajustes rápidos) ===== */
+:root{
+  /* espaçamentos */
+  --al-col-gap:      18px;   /* espaço entre colunas */
+  --al-row-gap:      22px;   /* espaço entre linhas  */
+
+  /* rótulos */
+  --al-label-top:    12px;   /* espaço ANTES do label */
+  --al-label-bottom: 12px;   /* espaço DEPOIS do label (abaixo do input) */
+  --al-label-gap:     8px;   /* espaço entre texto do label e input */
+
+  /* altura padrão dos inputs (1 linha) */
+  --al-control-h:    40px;
+
+  /* auditoria (textarea fora do grid: usa os mesmos valores por padrão) */
+  --al-audit-top:    var(--al-label-top);
+  --al-audit-bottom: var(--al-label-bottom);
+
+  /* cores do modo “view” (desabilitado) */
+  --al-disabled-bg:  #f1f5f9; /* cinza clarinho */
+  --al-disabled-fg:  #6b7280; /* texto suavizado */
+}
+
+/* evita overflow horizontal no container do Admin */
+.admin-wrap{ overflow-x: hidden; }
+
+/* =============== GRID DO FORM =============== */
+#org-panel #org-form .grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--al-col-gap);
+  row-gap:    var(--al-row-gap);
+}
+
+/* mobile: empilha */
+@media (max-width: 860px){
+  #org-panel #org-form .grid{ grid-template-columns: 1fr; }
+}
+
+/* campo ocupando as 2 colunas (se algum dia precisar) */
+#org-panel #org-form .grid > [data-span="2"]{ grid-column: 1 / -1; }
+
+/* =============== LABELS (rótulos) =============== */
+/* no HTML o <label> CONTÉM o <input>; tornamos o label um stack vertical */
+#org-panel #org-form .grid > label{
+  display: flex;
+  flex-direction: column;
+  gap: var(--al-label-gap);
+  margin: var(--al-label-top) 0 var(--al-label-bottom);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #0b1220;
+}
+
+/* primeira linha não precisa margem superior extra */
+#org-panel #org-form .grid > label:nth-child(-n+2){ margin-top: 0; }
+
+/* “Observação de auditoria (opcional)” — label fora do grid */
+#org-panel label[for="audit_note"]{
+  display: block;
+  margin: var(--al-audit-top) 0 var(--al-audit-bottom);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #0b1220;
+}
+
+/* =============== CAMPOS (inputs/selects/areas) =============== */
+#org-panel #org-form input,
+#org-panel #org-form select,
+#org-panel #org-form textarea{
+  width: 100%;
+  height: var(--al-control-h);
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #0b1220;
+  font-size: 15px;
+  line-height: 1.2;
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* foco consistente */
+#org-panel #org-form input:focus,
+#org-panel #org-form select:focus,
+#org-panel #org-form textarea:focus{
+  border-color: #5963ff;
+  box-shadow: 0 0 0 3px rgba(89,99,255,.12);
+}
+
+/* textareas DENTRO do grid se comportam como inputs (1 linha) */
+#org-panel #org-form .grid textarea{
+  height:     var(--al-control-h);
+  min-height: var(--al-control-h);
+  resize: none;
+}
+
+/* =============== ESTADOS — SOMENTE LEITURA/DESABILITADO =============== */
+/* alta especificidade (2 IDs) para ganhar de qualquer estilo base que deixe branco */
+#org-panel #org-form input[disabled],
+#org-panel #org-form input:disabled,
+#org-panel #org-form select[disabled],
+#org-panel #org-form select:disabled,
+#org-panel #org-form textarea[disabled],
+#org-panel #org-form textarea:disabled{
+  background:  var(--al-disabled-bg);
+  color:       var(--al-disabled-fg);
+  border-color:rgba(0,0,0,.12);
+  box-shadow:  none;
+  cursor:      not-allowed;
+  opacity:     1;
+  pointer-events: auto; /* mostra cursor de bloqueado */
+}
+
+/* =============== ÁREA DE AUDITORIA (multi-linha) =============== */
+#org-panel #audit_note{
+  display: block;
+  width: 100%;
+  min-height: 110px;      /* multi-linha real */
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #0b1220;
+  padding: 10px 12px;
+}
+
+/* auditoria desabilitada com o MESMO visual cinza do “view” */
+#org-panel #audit_note[disabled],
+#org-panel #audit_note:disabled{
+  background:  var(--al-disabled-bg);
+  color:       var(--al-disabled-fg);
+  border-color:rgba(0,0,0,.12);
+  box-shadow:  none;
+  cursor:      not-allowed;
+  opacity:     1;
+  pointer-events: auto;
+}
+
+/* =============== MENSAGEM / HISTÓRICO =============== */
+#msgPanel textarea{
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* =============== CABEÇALHO DO CARD =============== */
+#org-panel .card-header{ gap: 12px; }
+#org-panel .card-header h3{
+  margin: 0;
+  font-size: 16px;
+}
+
+/* ===== Admin Lite – complementos mínimos (preservar) ===== */
+/* Visual claro para campos desabilitados (somente leitura) — redundante,
+   mas mantido por compatibilidade com versões anteriores. */
+#org-panel input[disabled],
+#org-panel select[disabled],
+#org-panel textarea[disabled]{
+  background:  var(--al-disabled-bg);
+  color:       var(--al-disabled-fg);
+  border-color:rgba(0,0,0,.12);
+  box-shadow:  none;
+  cursor:      not-allowed;
+}

@@ -13,11 +13,22 @@
   const hide = (el) => el?.classList?.add("hide");
   const pick = (...selectors) => { for (const sel of selectors) { const el = $(sel); if (el) return el; } return null; };
   const onlyDigits = (s) => (s || "").replace(/\D/g, "");
+  const fmtBytes = (n=0) => {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+    return `${(n/1024/1024).toFixed(2)} MB`;
+  };
+  const fmtDateTime = (iso) => {
+    try { return new Date(iso).toLocaleString(); } catch { return "—"; }
+  };
 
   // ===== Constantes =====
   const TERMS_VER = 1;
   const TERMS_URL = `/legal/terms/pt-BR/${TERMS_VER}/terms.html`;
   const ORG_CANCEL_REDIRECT = "/";
+  const DOCS_BUCKET = "org-docs";       // Storage privado
+  const DOCS_MAX_MB = 10;               // limite de 10 MB
+  const DOCS_ACCEPT = "application/pdf";
 
   // ===== Supabase =====
   if (!window.connectSupabase) {
@@ -200,6 +211,8 @@
     orgForm.onsubmit = async (e) => {
       e.preventDefault();
       e.stopImmediatePropagation?.();
+
+      // limpa
       showErrors([]);
 
       // Coleta
@@ -285,127 +298,251 @@
     };
   }
 
-  
-
-  // ===== Card de Documentos (Contrato social) =====
- 
-// ===== Documentos (Contrato social – card + ações) =====
-function ensureDocsUI() {
-  if (!docsSheet) return;
-
-  // esconde os botões antigos, se existirem no HTML
-  $("#btnDocsNow")?.classList.add("hide");
-  $("#btnDocsLater")?.classList.add("hide");
-
-  // vamos montar o card no footer da sheet
-  const host = docsSheet.querySelector(".sheet__footer") || docsSheet;
-
-  // evita duplicar
-  let card = host.querySelector("#contractCard");
-  if (card) {
-    // já existe → só re-renderiza textos/botões conforme status atual
-    return renderCard();
+  // ===== Mensagens do Suporte (visíveis no app) =====
+  async function loadAppNotes() {
+    try {
+      // Ajuste o nome/colunas se seu schema for diferente
+      const { data, error } = await sb
+        .from("notes")
+        .select("id, created_at, reviewer_name, message, code, visibility")
+        .eq("user_id", user.id)
+        .eq("visibility", "app")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn("[notes] erro ao carregar:", e);
+      return [];
+    }
   }
 
-  // cria o contêiner
-  card = document.createElement("div");
-  card.id = "contractCard";
-  card.className = "doccard";
-  host.appendChild(card);
+  function renderNotesBox(list) {
+    const host = $("#appNotesBox");
+    if (!host) return;
+    if (!list.length) { host.innerHTML = ""; return; }
 
-  renderCard();
-
-  // --- helpers internos ---
-
-  function statusInfo(st) {
-    const map = {
-      pending:   { label: "Pendente",     pill: "pill pill--muted",
-                   desc: "Envie o contrato social para iniciarmos a verificação. Você pode concluir agora ou voltar depois." },
-      under_review: { label: "Em análise", pill: "pill pill--info",
-                   desc: "Estamos analisando o documento. Avisaremos por e-mail quando a análise terminar." },
-      approved:  { label: "Aprovado",      pill: "pill pill--success",
-                   desc: "Documento aprovado. Você já pode concluir e começar a usar o Bidly." },
-      rejected:  { label: "Reprovado",     pill: "pill pill--danger",
-                   desc: `Reprovado${profile?.docs_rejection_reason ? ` — ${profile.docs_rejection_reason}` : ""}. Corrija e reenvie.` },
-      submitted: { label: "Enviado",       pill: "pill pill--info",
-                   desc: "Documento enviado para conferência." }
-    };
-    return map[st] || map.pending;
-  }
-
-  function html(actionsHtml, s) {
-    const info = statusInfo(s);
-    return `
-      <div class="doccard__head">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <strong>Contrato social</strong>
-          <span class="${info.pill}">${info.label}</span>
-        </div>
-        <div class="doccard__actions">${actionsHtml}</div>
+    const html = `
+      <div style="margin-top:14px;background:#f1f5f9;border-radius:10px;padding:12px;">
+        <div class="muted" style="margin-bottom:6px;"><strong>Suporte Bidly</strong>: histórico</div>
+        ${list.map(n => `
+          <div style="padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin:6px 0">
+            <div class="mini muted">
+              <strong>[App] ${fmtDateTime(n.created_at)}${n.reviewer_name ? ` • ${n.reviewer_name}` : ""}</strong>
+              ${n.code ? ` — ${n.code}` : ""}
+            </div>
+            <div>${(n.message || "").replace(/\n/g, "<br>")}</div>
+          </div>
+        `).join("")}
       </div>
-      <p class="doccard__desc">${info.desc}</p>
     `;
+    host.innerHTML = html;
   }
 
-  function renderCard() {
-    const s = (profile?.docs_status || "pending").toLowerCase();
+  // ===== Documentos (Contrato social – card + upload) =====
+  function ensureDocsUI() {
+    if (!docsSheet) return;
 
-    let actions = "";
-    if (s === "approved") {
-      actions = `<button id="btnDocsFinish" class="btn primary">Concluir</button>`;
-    } else if (s === "under_review" || s === "submitted") {
-      actions = ``; // em análise → sem botões
-    } else if (s === "rejected" || s === "pending") {
-      actions = `
-        <button id="btnDocsLater2" class="btn ghost">Continuar depois</button>
-        <button id="btnDocsNow2" class="btn primary">Concluir agora</button>
-      `;
-    } else {
-      // fallback
-      actions = `
-        <button id="btnDocsLater2" class="btn ghost">Continuar depois</button>
-        <button id="btnDocsNow2" class="btn primary">Concluir agora</button>
-      `;
+    // esconder botões do HTML base (a UI agora é no card)
+    $("#btnDocsNow")?.classList.add("hide");
+    $("#btnDocsLater")?.classList.add("hide");
+
+    const host = docsSheet.querySelector(".sheet__footer") || docsSheet;
+    let card = host.querySelector("#contractCard");
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "contractCard";
+      card.className = "doccard";
+      host.appendChild(card);
     }
 
-    card.innerHTML = html(actions, s);
+    renderCard();
 
-    // handlers
+    // ---------- helpers de UI ----------
+    function statusInfo(st) {
+      const map = {
+        pending:      { label: "Pendente",     pill: "pill pill--muted",
+                        desc: "Envie o contrato social para iniciarmos a verificação. Você pode concluir agora ou voltar depois." },
+        submitted:    { label: "Enviado",      pill: "pill pill--info",
+                        desc: "Documento enviado para conferência." },
+        under_review: { label: "Em análise",   pill: "pill pill--info",
+                        desc: "Estamos analisando o documento. Avisaremos por e-mail quando a análise terminar." },
+        rejected:     { label: "Reprovado",    pill: "pill pill--danger",
+                        desc: `Reprovado${profile?.docs_rejection_reason ? ` — ${profile.docs_rejection_reason}` : ""}. Corrija e reenvie.` },
+        approved:     { label: "Aprovado",     pill: "pill pill--success",
+                        desc: "Documento aprovado. Você já pode concluir e começar a usar o Bidly." }
+      };
+      return map[st] || map.pending;
+    }
 
-    // Continuar depois → não altera status; volta para "/"
-    $("#btnDocsLater2")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      try { window.location.assign("/"); } catch {}
-    });
+    async function renderCard() {
+      const s = (profile?.docs_status || "pending").toLowerCase();
 
-    // Concluir agora → marca 'under_review' e re-renderiza (sem sair)
-    $("#btnDocsNow2")?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      try {
-        await patchProfile({ docs_status: "under_review", docs_submitted_at: new Date().toISOString() });
-        profile = await getProfile();
-        updateProgress();
-        renderCard();
-      } catch (err) {
-        console.error("[docs] concluir agora:", err);
+      // ações do cabeçalho do card
+      let actions = "";
+      if (s === "approved") {
+        actions = `<button id="btnDocsFinish" class="btn primary">Concluir</button>`;
+      } else if (s === "under_review" || s === "submitted") {
+        actions = ``; // sem botões
+      } else {
+        // pending ou rejected
+        actions = `
+          ${s === "rejected" ? `<button id="btnGoOrg" class="btn ghost">Ir para dados</button>` : ``}
+          <button id="btnDocsLater2" class="btn ghost">Continuar depois</button>
+          <button id="btnDocsNow2" class="btn primary">Concluir agora</button>
+        `;
       }
-    });
 
-    // Concluir (quando aprovado) → fecha fluxo e manda pra "/"
-    $("#btnDocsFinish")?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      try {
+      const info = statusInfo(s);
+
+      // Bloco do uploader
+      const hasFile = !!(profile?.docs_file_url);
+      const filename = hasFile ? (profile.docs_file_url.split("/").pop() || "contrato.pdf") : "Nenhum arquivo enviado";
+      const fileRow = `
+        <div class="uploader">
+          <div class="uploader__row">
+            <div class="filebadge ${hasFile ? '' : 'is-empty'}" title="${hasFile ? filename : ''}">
+              <span class="filebadge__icon">📄</span>
+              <span class="filebadge__name">${filename}</span>
+              ${hasFile ? `<span class="filebadge__meta">PDF</span>` : ''}
+            </div>
+            <div class="uploader__actions">
+              ${(s === 'approved' || s === 'under_review')
+                ? ''
+                : `
+                  <label class="btn ghost">
+                    <input id="fileInput" type="file" accept="${DOCS_ACCEPT}" class="hide">
+                    ${hasFile ? 'Substituir' : 'Enviar PDF'}
+                  </label>
+                  ${hasFile ? `<button id="btnRemoveFile" class="btn ghost">Remover</button>` : ''}
+                `}
+            </div>
+          </div>
+          <small class="muted">Apenas PDF, até ${DOCS_MAX_MB} MB.</small>
+        </div>
+      `;
+
+      // container para histórico do suporte (só mostra quando reprovado)
+      const notesContainer = `<div id="appNotesBox"></div>`;
+
+      card.innerHTML = `
+        <div class="doccard__head">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <strong>Contrato social</strong>
+            <span class="${info.pill}">${info.label}</span>
+          </div>
+          <div class="doccard__actions">${actions}</div>
+        </div>
+        <p class="doccard__desc">${info.desc}</p>
+        ${fileRow}
+        ${s === 'rejected' ? notesContainer : ''}
+      `;
+
+      // Handlers de navegação/fluxo
+      $("#btnGoOrg")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        // Volta um estágio (dados da organização)
         hide(docsSheet);
-        updateProgress();
-        window.location.assign("/");
-      } catch (err) {
-        console.error("[docs] concluir:", err);
+        show(orgSheet);
+        try { orgSheet.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
+      });
+
+      $("#btnDocsLater2")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        try { window.location.assign("/"); } catch {}
+      });
+
+      $("#btnDocsNow2")?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          await patchProfile({
+            docs_status: "under_review",
+            docs_submitted: true,
+            docs_submitted_at: new Date().toISOString()
+          });
+          profile = await getProfile();
+          updateProgress();
+          renderCard();
+        } catch (err) {
+          console.error("[docs] concluir agora:", err);
+        }
+      });
+
+      $("#btnDocsFinish")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        try {
+          hide(docsSheet);
+          updateProgress();
+          window.location.assign("/");
+        } catch (err) {
+          console.error("[docs] concluir:", err);
+        }
+      });
+
+      // Upload
+      const input = $("#fileInput");
+      input?.addEventListener("change", async (ev) => {
+        const f = ev.target.files?.[0];
+        if (!f) return;
+
+        if (f.type !== DOCS_ACCEPT) {
+          alert("Envie um PDF (.pdf).");
+          input.value = "";
+          return;
+        }
+        if (f.size > DOCS_MAX_MB * 1024 * 1024) {
+          alert(`Arquivo muito grande. Limite de ${DOCS_MAX_MB} MB.`);
+          input.value = "";
+          return;
+        }
+
+        const stamp = Date.now();
+        const path = `${user.id}/contrato_v${stamp}.pdf`;
+
+        try {
+          const { error: upErr } = await sb.storage.from(DOCS_BUCKET)
+            .upload(path, f, { contentType: DOCS_ACCEPT, upsert: false });
+          if (upErr) throw upErr;
+
+          await patchProfile({
+            docs_file_url: path,
+            docs_status: (profile.docs_status || "pending")
+          });
+
+          profile = await getProfile();
+          renderCard();
+        } catch (er) {
+          console.error("[docs] upload:", er);
+          alert("Não foi possível enviar o PDF agora.");
+        } finally {
+          input.value = "";
+        }
+      });
+
+      $("#btnRemoveFile")?.addEventListener("click", async () => {
+        if (!profile?.docs_file_url) return;
+        if (!confirm("Remover o arquivo enviado?")) return;
+
+        try {
+          await sb.storage.from(DOCS_BUCKET).remove([profile.docs_file_url]);
+        } catch (_) { /* ignore */ }
+
+        try {
+          await patchProfile({ docs_file_url: null });
+          profile = await getProfile();
+          renderCard();
+        } catch (er) {
+          console.error("[docs] remover path:", er);
+        }
+      });
+
+      // Carrega histórico do suporte quando REPROVADO
+      if (s === "rejected") {
+        const notes = await loadAppNotes();
+        renderNotesBox(notes);
       }
-    });
+    }
   }
-}
-
-
 
   // ===== Progresso e decisão de etapa =====
   function updateProgress() {
@@ -441,7 +578,7 @@ function ensureDocsUI() {
     const isApproved = (profile.docs_status || "").toLowerCase() === "approved";
     if (docsSheet && !isApproved) {
       hide(termsSheet); hide(orgSheet); show(docsSheet);
-      ensureDocsUI();          // monta o card aqui
+      ensureDocsUI();          // monta o card aqui (com upload e histórico quando reprovado)
       updateProgress(); return;
     }
 
@@ -454,7 +591,7 @@ function ensureDocsUI() {
   try {
     wireTerms();
     wireOrg();
-    await nextStep();   // nextStep chama ensureDocsUI() quando necessário
+    await nextStep();
   } catch (e) {
     console.error(TAG, e);
   }
