@@ -378,6 +378,9 @@
     async function renderCard() {
       const s = (profile?.docs_status || "pending").toLowerCase();
 
+      // Determina se há arquivo (path salvo no bucket privado)
+      const hasFile = !!(profile?.docs_file_url);
+
       // ações do cabeçalho do card
       let actions = "";
       if (s === "approved") {
@@ -386,17 +389,16 @@
         actions = ``; // sem botões
       } else {
         // pending ou rejected
-        actions = `
-          ${s === "rejected" ? `<button id="btnGoOrg" class="btn ghost">Ir para dados</button>` : ``}
-          <button id="btnDocsLater2" class="btn ghost">Continuar depois</button>
-          <button id="btnDocsNow2" class="btn primary">Concluir agora</button>
-        `;
+        const goOrg = (s === "rejected") ? `<button id="btnGoOrg" class="btn ghost">Ir para dados</button>` : ``;
+        const later = `<button id="btnDocsLater2" class="btn ghost">Continuar depois</button>`;
+        // “Concluir agora” só aparece quando há PDF anexado
+        const now   = hasFile ? `<button id="btnDocsNow2" class="btn primary">Concluir agora</button>` : ``;
+        actions = `${goOrg}${later}${now}`;
       }
 
       const info = statusInfo(s);
 
       // Bloco do uploader
-      const hasFile = !!(profile?.docs_file_url);
       const filename = hasFile ? (profile.docs_file_url.split("/").pop() || "contrato.pdf") : "Nenhum arquivo enviado";
       const fileRow = `
         <div class="uploader">
@@ -454,6 +456,11 @@
 
       $("#btnDocsNow2")?.addEventListener("click", async (e) => {
         e.preventDefault();
+        // Guard extra: não deixa concluir se não houver arquivo
+        if (!profile?.docs_file_url) {
+          alert("Anexe o PDF (Contrato Social) para concluir.");
+          return;
+        }
         try {
           await patchProfile({
             docs_status: "under_review",

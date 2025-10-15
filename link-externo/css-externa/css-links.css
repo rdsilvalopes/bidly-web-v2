@@ -1,0 +1,244 @@
+/* ===================================================================
+   Base
+=================================================================== */
+:root{
+  --bg-1:#0f1b2a;
+  --bg-2:#111e30;
+  --bg-page:#f5f7fb;
+
+  --text-1:#0f1729;
+  --text-2:#334155;
+  --text-3:#475569;
+
+  --white:#ffffff;
+
+  --c-brand:#6ea8ff;
+  --c-brand-2:#8ed5ff;
+  --c-brand-3:#b3ffe6;
+
+  --btn:#3b5bfd;
+  --btn-hover:#2447f3;
+
+  --card:#ffffff;
+  --shadow:0 10px 30px rgba(2,6,23,.14);
+  --ring:0 0 0 10px rgba(59,91,253,.15);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color:var(--text-1);
+  background:var(--bg-page);
+}
+
+.container{
+  width:min(1120px, 92vw);
+  margin-inline:auto;
+}
+
+/* ===================================================================
+   Header
+=================================================================== */
+.site-header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  backdrop-filter:saturate(150%) blur(8px);
+  background:linear-gradient(180deg, rgba(15,27,42,.85), rgba(15,27,42,.65)) ;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.navbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 0;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#e8efff;
+  text-decoration:none;
+  font-weight:700;
+  letter-spacing:.2px;
+}
+.brand-emoji{ font-size:18px; }
+.brand-text{ font-size:18px; }
+
+.nav-links{
+  display:flex;
+  align-items:center;
+  gap:22px;
+}
+.nav-links a{
+  color:#d9e4ff;
+  text-decoration:none;
+  font-weight:500;
+  opacity:.9;
+}
+.nav-links a:hover{ opacity:1; }
+.nav-links .chip{
+  padding:4px 8px; border-radius:999px;
+  background:rgba(255,255,255,.12);
+  color:#dbe8ff; font-size:12px; font-weight:600;
+}
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:8px; padding:10px 16px; border-radius:12px;
+  text-decoration:none; white-space:nowrap; cursor:pointer;
+  transition:all .2s ease;
+  font-weight:600;
+}
+.btn-primary{
+  background:var(--btn); color:#fff; box-shadow: var(--shadow);
+}
+.btn-primary:hover{ background:var(--btn-hover); transform:translateY(-1px); }
+.btn-ghost{
+  background:#fff; color:var(--text-1); border:1px solid #e5e7eb;
+}
+.btn-ghost:hover{ box-shadow:var(--shadow); transform:translateY(-1px); }
+.btn-lg{ padding:14px 18px; border-radius:14px; }
+
+/* ===================================================================
+   Hero (gradiente escuro)
+=================================================================== */
+.hero{
+  background:
+    radial-gradient(1200px 400px at 15% 10%, rgba(99,102,241,.16), transparent 60%),
+    radial-gradient(800px 500px at 90% 10%, rgba(14,165,233,.18), transparent 60%),
+    linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  color:#e7eeff;
+  padding:52px 0 64px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.hero-grid{
+  display:grid;
+  grid-template-columns: 1fr 520px;
+  gap:52px;
+  align-items:start;
+}
+.hero-left .kicker{
+  color:#cfe3ff; font-weight:700; letter-spacing:.2px;
+  margin:0 0 18px; opacity:.95;
+}
+.hero-title{
+  margin:0 0 16px;
+  font-size:56px; line-height:1.02; letter-spacing:-0.02em;
+  color:#f0f6ff; font-weight:800;
+}
+.txt-gradient{
+  background-image:linear-gradient(90deg, var(--c-brand) 0%, var(--c-brand-2) 52%, var(--c-brand-3) 100%);
+  background-clip:text; -webkit-background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
+}
+.hero-sub{
+  color:#d6e3ff; opacity:.9; font-size:18px; line-height:1.55;
+  margin:0 0 22px;
+}
+.pill-row{ display:flex; flex-wrap:wrap; gap:12px; margin:0 0 20px; }
+.pill{
+  display:inline-flex; align-items:center; padding:10px 14px;
+  border-radius:999px; background:rgba(255,255,255,.12);
+  color:#e9f1ff; font-weight:600; border:1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(4px);
+}
+.hero-ctas{ display:flex; gap:14px; }
+
+/* Trilho da direita */
+.hero-right{ justify-self:end; max-width:520px; }
+.hero-rail{
+  border:2px dashed rgba(255,255,255,.25);
+  border-radius:18px; padding:18px;
+  background:rgba(0,0,0,.06);
+}
+.card{
+  display:flex; gap:14px; align-items:flex-start;
+  background:var(--card); border-radius:14px; padding:16px 16px;
+  box-shadow:0 18px 40px rgba(2,6,23,.12);
+  margin:14px 0; width:100%;
+}
+.card-ico{ font-size:22px; line-height:1; margin-top:2px; }
+.card-title{
+  margin:0 0 6px; color:#0b1430; font-size:18px; font-weight:800;
+}
+.card-desc{
+  margin:0; color:#475569; line-height:1.45;
+  white-space:normal;
+}
+
+/* ===================================================================
+   Seções
+=================================================================== */
+.section{ padding:68px 0; background:#f7f9fe; }
+.section-light{ background:#fff; }
+.section-title{
+  font-size:36px; margin:0 0 6px; color:#0b1430; letter-spacing:-.02em;
+}
+.section-sub{
+  margin:0 0 26px; color:#5a6b86;
+}
+
+/* 3 cards (como funciona) */
+.cards-3{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:22px;
+}
+.step-card{
+  background:#fff; border-radius:14px; padding:18px 18px 16px;
+  box-shadow:var(--shadow);
+}
+.step-badge{
+  display:inline-block; background:#ecf2ff; color:#3753f5;
+  font-weight:700; font-size:12px; padding:6px 10px; border-radius:999px;
+  margin-bottom:12px;
+}
+.step-card h3{ margin:0 0 8px; color:#0b1430; }
+.step-card ul{ margin:0; padding-left:18px; color:#475569; line-height:1.6; }
+
+/* Benefícios (lista) */
+.benefit-list{ display:grid; grid-template-columns:1fr; gap:14px; }
+.benefit-item{
+  display:flex; gap:14px; align-items:flex-start;
+  background:#fff; border-radius:14px; padding:16px; box-shadow:var(--shadow);
+}
+.benefit-ico{ font-size:22px; line-height:1; }
+.benefit-body h3{ margin:0 0 6px; }
+.benefit-body p{ margin:0; color:#4b5563; }
+.benefit-ctas{ margin-top:18px; display:flex; gap:14px; }
+
+/* FAQ */
+.faq-list{ display:grid; gap:10px; }
+.faq-item{
+  background:#fff; border-radius:12px; padding:14px 16px; box-shadow:var(--shadow);
+}
+.faq-item summary{
+  cursor:pointer; font-weight:700; color:#0b1430;
+}
+.faq-item p{ color:#475569; margin:8px 0 0; }
+
+/* ===================================================================
+   Footer
+=================================================================== */
+.site-footer{
+  background:#fff; border-top:1px solid #e5e7eb;
+}
+.footer-wrap{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 0;
+}
+.footnote{ color:#6b7280; margin:0; }
+.footer-brand{ display:flex; gap:8px; align-items:center; color:#0b1430; font-weight:800; }
+
+/* ===================================================================
+   Responsivo
+=================================================================== */
+@media (max-width: 1024px){
+  .hero-grid{ grid-template-columns:1fr; gap:28px; }
+  .hero-right{ justify-self:stretch; max-width:100%; }
+  .hero-title{ font-size:48px; }
+}
+@media (max-width: 720px){
+  .cards-3{ grid-template-columns:1fr; }
+  .hero-title{ font-size:40px; }
+}
