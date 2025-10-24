@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bidly • Admin • Papéis</title>
+
+  <!-- Reaproveita estilos do app/admin -->
+  <link rel="stylesheet" href="/assets/css/activation.css?v=DOCS4" />
+  <link rel="stylesheet" href="/assets/css/standard-ui.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/admin-lite.css?v=AL1" />
+
+  <style>
+    /* Mantém o mesmo grid do Admin Lite */
+    .admin-wrap{max-width:1100px;margin:18px auto;padding:0 16px}
+    .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
+    .toolbar input,.toolbar select{height:40px;border:1px solid rgba(0,0,0,.14);border-radius:10px;padding:0 12px}
+
+    /* Título/subtitulo no mesmo ritmo do painel */
+    .page-title{margin:0 0 6px;font-size:20px;line-height:1.2}
+    .page-sub{margin:0 0 10px;color:#6b7280;font-size:14px}
+
+    /* Tabela idêntica à do Admin Lite */
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 12px;border-bottom:1px solid rgba(0,0,0,.08);text-align:left}
+    th{font-size:14px;color:#475569}
+    .note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+    .muted{color:#6b7280}
+  </style>
+</head>
+<body class="wrap has-topbar">
+  <header class="topbar">
+    <div class="container">
+      <strong style="color:#fff">Bidly • Admin</strong>
+      <div class="spacer"></div>
+      <a class="btn ghost" href="/admin/index.html">Voltar ao painel</a>
+      <a class="btn ghost" href="/">Voltar ao app</a>
+    </div>
+  </header>
+
+  <main class="admin-wrap">
+    <h2 class="page-title">Papéis administrativos</h2>
+    <p class="page-sub">Conceda ou revogue papéis para contas já cadastradas.</p>
+
+    <!-- Mostrado quando o usuário ainda NÃO pode listar (sem papel) -->
+    <div id="bootstrapBar" class="note" style="display:none;margin:12px 0;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <strong>Nenhum admin configurado.</strong>
+          <div class="muted" style="font-size:.9rem">
+            Clique para se tornar o primeiro <code>adm.master</code> (só funciona se ainda não houver master).
+          </div>
+        </div>
+        <button id="btnBootstrap" class="btn primary">Tornar-me admin (bootstrap)</button>
+      </div>
+    </div>
+
+    <!-- Formulário para conceder/revogar -->
+    <div id="grantRevokeBar" class="toolbar" style="display:none">
+      <input id="email" type="email" placeholder="email@empresa.com" style="width:280px" />
+      <select id="role">
+        <option value="adm.review">adm.review (analista)</option>
+        <option value="adm.master">adm.master (gestão)</option>
+      </select>
+      <button id="btnGrant" class="btn">Conceder</button>
+      <button id="btnRevoke" class="btn ghost">Revogar</button>
+    </div>
+
+    <!-- Tabela de papéis -->
+    <table id="grid" style="display:none">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Papel</th>
+          <th>Atribuído em</th>
+          <th>Por</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="muted">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <!-- SCRIPTS (ordem importa) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+  <script src="/assets/js/supa.js?v=1"></script>
+  <script src="/assets/js/admin.roles.js?v=R1"></script>
+
+
+
+
+</body>
+</html>

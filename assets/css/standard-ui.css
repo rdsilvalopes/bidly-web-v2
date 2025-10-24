@@ -1,0 +1,166 @@
+/* Bidly • Standard UI Kit (v1)
+   Primitives compartilhados para TODO o sistema:
+   - Tokens
+   - Grid 12 colunas
+   - Campos (label + input/textarea/select)
+   - Botões
+   - Utilitários pequenos
+
+   OBS: Admin e demais módulos só complementam com seus componentes próprios.
+*/
+
+/* ===== Tokens globais ===== */
+:root{
+  /* Tipografia & layout */
+  --ui-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans";
+  --ui-container-w: min(92vw, 1560px);
+
+  /* Cores base */
+  --ui-bg: #fff;
+  --ui-fg: #0b122a;           /* slate-ish */
+  --ui-muted: #6b7280;        /* slate-500/600 */
+  --ui-border: rgba(0,0,0,.14);
+
+  /* Ações */
+  --ui-primary: #5963ff;
+  --ui-primary-strong: #4b56ff;
+  --ui-primary-soft: rgba(89,99,255,.12);
+  --ui-danger: #d92c2c;
+  --ui-danger-soft: rgba(217,44,44,.10);
+
+  /* Raio/altura/spacing */
+  --ui-radius-sm: 10px;
+  --ui-radius: 12px;
+  --ui-input-h: 44px;
+  --ui-gap-x: 16px;
+  --ui-gap-y: 12px;
+}
+
+/* ===== Base ===== */
+html, body { color: var(--ui-fg); background: var(--ui-bg); font-family: var(--ui-font); }
+.u-muted { color: var(--ui-muted); }
+
+/* ===== Grid 12 colunas ===== */
+.u-form__grid, .u-grid{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0,1fr));
+  gap: var(--ui-gap-y) var(--ui-gap-x);
+}
+.u-col-12{ grid-column: span 12; min-width:0; }
+.u-col-9 { grid-column: span 9;  min-width:0; }
+.u-col-6 { grid-column: span 6;  min-width:0; }
+.u-col-4 { grid-column: span 4;  min-width:0; }
+.u-col-3 { grid-column: span 3;  min-width:0; }
+.u-col-2 { grid-column: span 2;  min-width:0; }
+
+@media (max-width: 900px){
+  .u-form__grid, .u-grid{ grid-template-columns: 1fr; gap: 10px 0; }
+  .u-form__grid > *, .u-grid > *{ grid-column: 1 / -1; }
+}
+
+/* ===== Campos ===== */
+.u-label{
+  display:block;
+  margin: 2px 0 6px;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ui-fg);
+}
+
+.u-input,
+.u-select,
+.u-textarea{
+  width: 100%;
+  height: var(--ui-input-h);
+  padding: 10px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-bg);
+  color: var(--ui-fg);
+  font-size: 15px;
+  line-height: 1.2;
+  outline: none;
+  box-shadow: none;
+}
+.u-textarea{
+  min-height: calc(var(--ui-input-h) * 2.2);
+  resize: vertical;
+}
+
+.u-input:focus,
+.u-select:focus,
+.u-textarea:focus{
+  border-color: var(--ui-primary);
+  box-shadow: 0 0 0 3px var(--ui-primary-soft);
+}
+
+/* Estado de leitura (readonly) */
+.u-input[readonly],
+.u-textarea[readonly],
+.u-select[readonly],
+.u-input--ro{
+  background: #f8fafc; /* soft */
+  color: #334155;      /* slate-700 */
+}
+
+/* Inválido */
+.u-input.is-invalid,
+.u-select.is-invalid,
+.u-textarea.is-invalid{
+  border-color: var(--ui-danger);
+  box-shadow: 0 0 0 3px var(--ui-danger-soft);
+}
+
+/* ===== Botões ===== */
+.u-btn{
+  appearance: none;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--ui-input-h);
+  padding: 0 18px;
+  border-radius: var(--ui-radius-sm);
+  border: 1px solid transparent;
+  font-weight: 700;
+  line-height: 1;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease, transform .02s ease;
+}
+.u-btn--primary{
+  background: var(--ui-primary);
+  color: #fff;
+}
+.u-btn--primary:hover{ background: var(--ui-primary-strong); }
+.u-btn--primary:active{ transform: translateY(1px); }
+
+.u-btn--ghost{
+  background: #fff;
+  color: #253046;
+  border-color: var(--ui-border);
+}
+.u-btn--ghost:hover,
+.u-btn--ghost:focus{
+  border-color: rgba(0,0,0,.28);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+.u-btn:disabled{ opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ===== Barra de ações ===== */
+.u-actions{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-border);
+}
+.u-actions .u-spacer{ flex: 1; }
+
+/* ===== Utilitários mínimos ===== */
+.u-mt-0{ margin-top: 0 !important; }
+.u-mt-8{ margin-top: 8px !important; }
+.u-mt-12{ margin-top: 12px !important; }
+.u-mt-16{ margin-top: 16px !important; }
+.u-sep{ height:1px; background: var(--ui-border); margin: 16px 0; }

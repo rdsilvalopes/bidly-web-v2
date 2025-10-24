@@ -1,183 +1,134 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="preauth">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bidly • Admin Lite</title>
+  <title>Bidly • Admin</title>
 
-  <!-- Reaproveita estilos do app -->
   <link rel="stylesheet" href="/assets/css/activation.css?v=DOCS4" />
+  <link rel="stylesheet" href="/assets/css/standard-ui.css?v=1">
   <link rel="stylesheet" href="/assets/css/admin-lite.css?v=AL1" />
+
   <style>
-    .admin-wrap{max-width:1100px;margin:18px auto;padding:0 16px}
-    .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
-    .toolbar input{height:40px;border:1px solid rgba(0,0,0,.14);border-radius:10px;padding:0 12px}
-    .toolbar .grow{flex:1}
+    /* Anti-blink: esconde enquanto o boot decide */
+    .preauth .topbar,
+    .preauth #adminApp { visibility: hidden; }
+
+    /* Largura canônica */
+    :root { --container-w: min(96vw, 1380px); }
+
+    .admin-wrap,
+    #adminApp {
+      max-width: var(--container-w) !important;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    /* Estilos locais do Admin Lite */
+    .admin-wrap{max-width:1200px;margin:18px auto;padding:0 16px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 14px}
+    .toolbar input,.toolbar select{height:40px;border:1px solid rgba(0,0,0,.14);border-radius:10px;padding:0 12px}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 12px;border-bottom:1px solid rgba(0,0,0,.08);text-align:left}
     th{font-size:14px;color:#475569}
-    .pill{padding:2px 8px;border-radius:999px;font-size:.8rem;background:#eef2ff;color:#4338ca;white-space:nowrap}
-    .pill.danger{background:#fee2e2;color:#b91c1c}
-    .pill.ok{background:#dcfce7;color:#166534}
-    .right{display:flex;gap:8px;justify-content:flex-end}
     .muted{color:#6b7280}
-    .note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin:12px 0}
-    .mini{font-size:.85rem}
-
-    /* Cartão genérico */
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px}
-    .card-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e7eb;padding:12px 16px}
-    .card-header h3{margin:0;font-size:16px}
-    .card-body{padding:16px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .grid label{display:flex;flex-direction:column;gap:6px;font-size:.95rem}
-    .grid input, .grid select, .grid textarea{
-      border:1px solid rgba(0,0,0,.14);border-radius:10px;padding:10px;height:40px
-    }
+    .right{text-align:right}
+    .pill{display:inline-block;padding:.2rem .5rem;border-radius:999px;font-size:.75rem}
+    .pill--success{background:#e6ffe9;color:#065f46;border:1px solid #a7f3d0}
+    .pill--danger{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
+    .pill--info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    .pill--muted{background:#f3f4f6;color:#374151;border:1px solid #e5e7eb}
+    .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+    .note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+    .detail{margin-top:18px;display:none}
+    .detail .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+    .detail .field{display:flex;flex-direction:column;gap:6px}
+    .detail label{font-size:.85rem;color:#475569}
+    .detail input,.detail textarea{height:40px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;background:#f8fafc}
+    .detail input[readonly], .detail input:disabled{background:#f8fafc}
+    .detail textarea{min-height:90px;resize:vertical}
   </style>
 </head>
+
 <body class="wrap has-topbar">
   <header class="topbar">
     <div class="container">
       <strong style="color:#fff">Bidly • Admin Lite</strong>
       <div class="spacer"></div>
+      <a class="btn ghost" href="/admin/roles.html">Gerenciar papéis</a>
       <a class="btn ghost" href="/">Voltar ao app</a>
     </div>
   </header>
 
   <main class="admin-wrap">
-    <div class="note mini">
-      <strong>Aviso:</strong> Admin temporário (MVP). Essa página executa funções seguras no banco
-      com uma senha interna. Troque a senha no banco e compartilhe somente com quem for revisar.
-    </div>
-
-    <div class="toolbar">
-      <input id="adminPass" type="password" placeholder="Senha de admin" style="width:220px" />
-      <input id="adminName" type="text" placeholder="Seu nome (auditoria)" style="width:220px" />
-      <input id="q" class="grow" type="search" placeholder="Buscar por CNPJ, Razão, Fantasia…" />
-      <button id="btnLoad" class="btn primary">Carregar</button>
-    </div>
-
-    <div class="toolbar" style="justify-content:flex-end">
-      <button id="btnPrev" class="btn ghost">◀ Anteriores</button>
-      <button id="btnNext" class="btn ghost">Próximos ▶</button>
-    </div>
-
-    <table id="grid">
-      <thead>
-        <tr>
-          <th>Razão / Fantasia</th>
-          <th>CNPJ</th>
-          <th>Status</th>
-          <th>Submissão</th>
-          <th>Review</th>
-          <th>Revisor</th>
-          <th class="right">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="7" class="muted">Use a senha e clique “Carregar”.</td></tr>
-      </tbody>
-    </table>
-
-    <!-- Barra de atalho (só aparece quando um registro é aberto) -->
-    <div id="jumpbar" class="toolbar" style="display:none; justify-content:flex-end">
-      <button id="jumpOrg" class="btn ghost">Ir para dados</button>
-      <button id="jumpMsg" class="btn ghost">Ir para mensagens</button>
-    </div>
-
-    <!-- Painel: Dados da organização (apenas UM, dentro do <main>) -->
-    <section id="org-panel" class="card" style="display:none; margin:24px 0;">
-      <header class="card-header">
-        <h3>Dados da organização</h3>
-        <div id="org-panel-actions">
-          <button id="org-edit-btn" class="btn">Editar</button>
-          <button id="org-save-btn" class="btn btn-primary" style="display:none;">Salvar</button>
-          <button id="org-cancel-btn" class="btn btn-ghost" style="display:none;">Cancelar</button>
-        </div>
-      </header>
-
-      <div class="card-body">
-        <form id="org-form">
-          <div class="grid">
-            <label>CNPJ
-              <input name="cnpj" id="f_cnpj" placeholder="00.000.000/0001-00" />
-            </label>
-            <label>Razão social
-              <input name="razao_social" id="f_razao" placeholder="Ex.: Acme Ltda" />
-            </label>
-          </div>
-
-          <div class="grid">
-            <label>Nome fantasia
-              <input name="nome_fantasia" id="f_fantasia" placeholder="Ex.: Acme" />
-            </label>
-            <label>Logradouro
-              <input name="logradouro" id="f_logradouro" placeholder="Rua/Avenida" />
-            </label>
-          </div>
-
-          <div class="grid">
-            <label>Número
-              <input name="numero" id="f_numero" placeholder="Ex.: 123" />
-            </label>
-            <label>Complemento
-              <input name="complemento" id="f_complemento" placeholder="Ex.: Sala 402" />
-            </label>
-          </div>
-
-          <div class="grid">
-            <label>Bairro
-              <input name="bairro" id="f_bairro" placeholder="Ex.: Centro" />
-            </label>
-            <label>Cidade
-              <input name="cidade" id="f_cidade" placeholder="Cidade" />
-            </label>
-          </div>
-
-          <div class="grid">
-            <label>Estado (UF)
-              <input name="uf" id="f_uf" maxlength="2" placeholder="UF" />
-            </label>
-            <label>CEP
-              <input name="cep" id="f_cep" placeholder="00000-000" />
-            </label>
-          </div>
-        </form>
-
-        <div class="field">
-          <label for="audit_note">Observação de auditoria (opcional)</label>
-          <textarea id="audit_note" name="audit_note" rows="2" placeholder="Ex.: Corrigi CEP e UF conforme contrato."></textarea>
-        </div>
-
-      </div>
-    </section>
-    <!-- fim do painel -->
-
-    <!-- Painel de mensagem / histórico (inicialmente oculto) -->
-    <section id="msgPanel" class="note" style="display:none;margin-top:18px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <strong style="font-size:16px">Mensagem</strong>
-        <button id="btnSendNote" class="btn primary">Atualizar</button>
-        <span id="msgTarget" class="muted mini"></span>
-      </div>
-
-      <textarea id="msgText"
-                rows="3"
-                placeholder="Escreva uma mensagem para o usuário (histórico visível no app quando 'Pendente'/'Reprovado')."
-                style="width:100%;border:1px solid rgba(0,0,0,.14);border-radius:10px;padding:10px;"></textarea>
-
-      <div id="msgHistory" style="margin-top:14px;background:#f1f5f9;border-radius:10px;padding:12px;">
-        <div class="muted" style="margin-bottom:6px;"><strong>Suporte Bidly</strong>: histórico</div>
-        <div id="msgHistoryBody" class="mini muted">—</div>
-      </div>
-     </section>
-
+    <section id="adminApp"></section>
   </main>
 
-  <!-- Supabase + cliente (igual ao app) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
-  <script src="/assets/js/supa.js?v=1"></script>
-  <script src="/assets/js/admin.js?v=AL4"></script>
+  <!-- 1) Supabase UMD -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+
+  <!-- 2) Redireciono de logout (precisa vir ANTES do supa.js) -->
+  <script>window.__SUPA_LOGOUT_REDIRECT = '/admin/login.html';</script>
+
+  <!-- 3) supa core + guards (um único fluxo de sessão para o site) -->
+  <script defer src="/assets/js/supa.js?v=1"></script>
+  <script defer src="/assets/js/guards.js?v=1"></script>
+
+  <!-- utils (carregar ANTES do view.detail.js) -->
+  <script src="/assets/js/utils/mask.js?v=1"></script>
+
+  <!-- 4) Módulos do Admin (definem Bidly.admin.getCaps, Bidly.admin.mount, etc.) -->
+  <script defer src="/assets/js/admin/api.js?v=AL3"></script>
+  <script defer src="/assets/js/admin/caps.js?v=AL3"></script>
+
+  <script defer src="/assets/js/admin/view.detail.js?v=AL1"></script>
+  <script defer src="/assets/js/admin/view.js?v=AL12"></script>
+  <script defer src="/assets/js/admin/boot.js?v=AL3"></script>
+
+
+  <!-- 5) Boot: roda APÓS DOMContentLoaded (todos os defer já executaram) -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      (async () => {
+        try {
+          // listeners/guard de sessão (arquivo guards.js)
+          await ensureAuthListeners();
+
+          // exige sessão: se não houver, guards redireciona para /admin/login.html
+          const session = await requireAuth();
+          if (!session) return;
+
+          // conecta supabase e carrega caps/roles
+          const sb    = await connectSupabase();
+          const uid   = session.user?.id    || null;
+          const email = session.user?.email || null;
+
+          const caps = await (window.Bidly?.admin?.getCaps
+            ? window.Bidly.admin.getCaps(sb, uid, email)
+            : { roles: [], caps: [] });
+
+          // memo global (usado em view/boot)
+          window.__ADMIN_ROLES = caps.roles || [];
+          window.__ADMIN_CAPS  = caps.caps  || [];
+
+          // monta painel (já definido por boot.js)
+          if (window.Bidly && window.Bidly.admin && typeof window.Bidly.admin.mount === 'function') {
+            await window.Bidly.admin.mount();
+          } else {
+            console.error('[admin] mount() não encontrado. Verifique a ordem de scripts.');
+          }
+
+          // exibe UI
+          document.documentElement.classList.remove('preauth');
+        } catch (err) {
+          console.error('[admin boot]', err);
+          // Em erro inesperado, ainda removemos o preauth pra mostrar o topo + msg de erro da tabela
+          document.documentElement.classList.remove('preauth');
+        }
+      })();
+    });
+  </script>
 </body>
 </html>

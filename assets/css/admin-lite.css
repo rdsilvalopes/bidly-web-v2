@@ -1,178 +1,181 @@
 /* =========================================================
-   Bidly • Admin Lite — “Dados da organização”
-   - labels acima (negrito leve)
-   - grid 2 colunas (1 no mobile)
-   - tokens de espaçamento ajustáveis
-   - estados de leitura/edição consistentes
-   ========================================================= */
+Bidly • Admin Lite — UI do painel (vAL-UI5)
+ESPECÍFICO do painel. Requer /assets/css/standard-ui.css.
+========================================================= */
 
-/* ===== TOKENS (ajustes rápidos) ===== */
-:root{
-  /* espaçamentos */
-  --al-col-gap:      18px;   /* espaço entre colunas */
-  --al-row-gap:      22px;   /* espaço entre linhas  */
-
-  /* rótulos */
-  --al-label-top:    12px;   /* espaço ANTES do label */
-  --al-label-bottom: 12px;   /* espaço DEPOIS do label (abaixo do input) */
-  --al-label-gap:     8px;   /* espaço entre texto do label e input */
-
-  /* altura padrão dos inputs (1 linha) */
-  --al-control-h:    40px;
-
-  /* auditoria (textarea fora do grid: usa os mesmos valores por padrão) */
-  --al-audit-top:    var(--al-label-top);
-  --al-audit-bottom: var(--al-label-bottom);
-
-  /* cores do modo “view” (desabilitado) */
-  --al-disabled-bg:  #f1f5f9; /* cinza clarinho */
-  --al-disabled-fg:  #6b7280; /* texto suavizado */
+/* ===== Container/base do painel ===== */
+#adminApp {
+  margin: 24px auto 56px auto;
+  max-width: var(--ui-container-w);
+  padding: 0 20px;
 }
 
-/* evita overflow horizontal no container do Admin */
-.admin-wrap{ overflow-x: hidden; }
-
-/* =============== GRID DO FORM =============== */
-#org-panel #org-form .grid{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: var(--al-col-gap);
-  row-gap:    var(--al-row-gap);
+/* ===== Cards do painel ===== */
+.al-card {
+  background: var(--ui-bg);
+  color: var(--ui-fg);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+  padding: 16px 16px 12px 16px;
 }
 
-/* mobile: empilha */
-@media (max-width: 860px){
-  #org-panel #org-form .grid{ grid-template-columns: 1fr; }
+/* ===== Filtros (usa o grid padrão .u-form__grid) ===== */
+.al-filters { margin-bottom: 14px; }
+
+/* =========================================================
+   Grid / Tabela do Admin
+========================================================= */
+.al-grid-wrap{
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
 }
 
-/* campo ocupando as 2 colunas (se algum dia precisar) */
-#org-panel #org-form .grid > [data-span="2"]{ grid-column: 1 / -1; }
+#grid{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  overflow: hidden;
+  min-width: 1120px; /* espaço p/ coluna de ações */
+}
 
-/* =============== LABELS (rótulos) =============== */
-/* no HTML o <label> CONTÉM o <input>; tornamos o label um stack vertical */
-#org-panel #org-form .grid > label{
+#grid thead th {
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--ui-muted);
+  background: color-mix(in oklab, var(--ui-bg) 92%, #000 8%);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+#grid tbody td {
+  font-size: 14.5px;
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--ui-border);
+  vertical-align: middle;
+}
+
+#grid tbody tr:last-child td { border-bottom: 0; }
+
+#grid tbody tr:hover {
+  background: color-mix(in oklab, var(--ui-bg) 88%, var(--ui-primary) 12%);
+}
+
+/* util de alinhamento na tabela */
+#grid td.right { text-align: right; white-space: nowrap; }
+
+/* Links dentro do grid (ex.: "abrir" PDF) */
+#grid a { text-decoration: none; font-weight: 600; outline: none; }
+#grid a:hover { text-decoration: underline; }
+
+/* ===== Pills de status ===== */
+.pill{
+  display: inline-block;
+  min-width: 96px;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  border: 1px solid transparent;
+}
+.pill--success{ color: #155e2e; background: #e8f6ee; border-color: #cbeeda; }
+.pill--danger { color: #8b1d24; background: #fdecec; border-color: #f3c2bc; }
+.pill--info   { color: #184f90; background: #e8f1fe; border-color: #cfe0ff; }
+.pill--muted  { color: var(--ui-muted); background: color-mix(in oklab, var(--ui-bg) 94%, #000 6%); border-color: var(--ui-border); }
+
+/* ===== Ações dentro do grid (coluna de botões) ===== */
+.al-action-buttons{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+
+/* Reserva de largura para 2 botões lado a lado */
+#grid .th-actions{ width: 300px; }
+
+/* ===== Paginação ===== */
+.al-pager{
   display: flex;
-  flex-direction: column;
-  gap: var(--al-label-gap);
-  margin: var(--al-label-top) 0 var(--al-label-bottom);
-  font-weight: 600;
-  font-size: 14.5px;
-  color: #0b1220;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-/* primeira linha não precisa margem superior extra */
-#org-panel #org-form .grid > label:nth-child(-n+2){ margin-top: 0; }
-
-/* “Observação de auditoria (opcional)” — label fora do grid */
-#org-panel label[for="audit_note"]{
-  display: block;
-  margin: var(--al-audit-top) 0 var(--al-audit-bottom);
-  font-weight: 600;
-  font-size: 14.5px;
-  color: #0b1220;
+/* ===== Mensagens/estados do painel ===== */
+.al-state{
+  color: var(--ui-muted);
+  padding: 18px 14px;
+  font-style: italic;
 }
-
-/* =============== CAMPOS (inputs/selects/areas) =============== */
-#org-panel #org-form input,
-#org-panel #org-form select,
-#org-panel #org-form textarea{
-  width: 100%;
-  height: var(--al-control-h);
-  padding: 10px 12px;
-  border: 1px solid rgba(0,0,0,.14);
+.al-state.error{
+  color: #8b1d24;
+  background: #fdecec;
+  border: 1px solid #f3c2bc;
   border-radius: 10px;
-  background: #fff;
-  color: #0b1220;
-  font-size: 15px;
-  line-height: 1.2;
-  outline: none;
-  box-sizing: border-box;
 }
 
-/* foco consistente */
-#org-panel #org-form input:focus,
-#org-panel #org-form select:focus,
-#org-panel #org-form textarea:focus{
-  border-color: #5963ff;
-  box-shadow: 0 0 0 3px rgba(89,99,255,.12);
+/* ===== Painel de detalhe do Admin ===== */
+#detailPanel{
+  margin-top: 18px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 16px;
+  background: var(--ui-bg);
+}
+#detailOrgMeta{ font-weight:700; margin:4px 0 12px 0; color:var(--ui-fg); }
+
+/* ===== Responsivo do grid (mobile) ===== */
+@media (max-width: 700px){
+  #grid thead{ display:none; }
+  #grid, #grid tbody, #grid tr, #grid td{ display:block; width:100%; }
+  #grid tr{ border-bottom: 1px solid var(--ui-border); }
+  #grid td{ border:0; padding:10px 12px; }
+  #grid td::before{
+    content: attr(data-th);
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color: var(--ui-muted);
+    margin-bottom:4px;
+  }
+  #grid td.right{ text-align:left; }
 }
 
-/* textareas DENTRO do grid se comportam como inputs (1 linha) */
-#org-panel #org-form .grid textarea{
-  height:     var(--al-control-h);
-  min-height: var(--al-control-h);
-  resize: none;
+/* ===== Correções e polimento ===== */
+#grid td{ word-break: break-word; }
+#grid td a[rel~="noopener"]{ padding: 2px 0; display: inline-block; }
+/* evita "abrir" quebrar em duas linhas no PDF */
+#grid a.js-pdf{ white-space: nowrap; }
+
+/* ===== Overrides quando o PAINEL está visível (sem mexer no login) ===== */
+.al-container:has(#adminApp:not(.hide)){
+  max-width: none;      /* remove limite 960px herdado do login */
+  display: block;       /* sai do grid do login */
+  place-items: initial; /* neutraliza centralização do grid */
+  padding-left: 0;
+  padding-right: 0;
 }
 
-/* =============== ESTADOS — SOMENTE LEITURA/DESABILITADO =============== */
-/* alta especificidade (2 IDs) para ganhar de qualquer estilo base que deixe branco */
-#org-panel #org-form input[disabled],
-#org-panel #org-form input:disabled,
-#org-panel #org-form select[disabled],
-#org-panel #org-form select:disabled,
-#org-panel #org-form textarea[disabled],
-#org-panel #org-form textarea:disabled{
-  background:  var(--al-disabled-bg);
-  color:       var(--al-disabled-fg);
-  border-color:rgba(0,0,0,.12);
-  box-shadow:  none;
-  cursor:      not-allowed;
-  opacity:     1;
-  pointer-events: auto; /* mostra cursor de bloqueado */
+#adminApp{
+  margin-left: auto;    /* centraliza o painel */
+  margin-right: auto;
+  max-width: var(--ui-container-w);
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
-/* =============== ÁREA DE AUDITORIA (multi-linha) =============== */
-#org-panel #audit_note{
-  display: block;
-  width: 100%;
-  min-height: 110px;      /* multi-linha real */
-  resize: vertical;
-  box-sizing: border-box;
-  border: 1px solid rgba(0,0,0,.14);
-  border-radius: 10px;
-  background: #fff;
-  color: #0b1220;
-  padding: 10px 12px;
-}
+/* Evita scroll lateral acidental no painel */
+html, body { overflow-x: hidden; }
 
-/* auditoria desabilitada com o MESMO visual cinza do “view” */
-#org-panel #audit_note[disabled],
-#org-panel #audit_note:disabled{
-  background:  var(--al-disabled-bg);
-  color:       var(--al-disabled-fg);
-  border-color:rgba(0,0,0,.12);
-  box-shadow:  none;
-  cursor:      not-allowed;
-  opacity:     1;
-  pointer-events: auto;
-}
-
-/* =============== MENSAGEM / HISTÓRICO =============== */
-#msgPanel textarea{
-  display: block;
-  width: 100%;
-  min-height: 120px;
-  resize: vertical;
-  box-sizing: border-box;
-  max-width: 100%;
-}
-
-/* =============== CABEÇALHO DO CARD =============== */
-#org-panel .card-header{ gap: 12px; }
-#org-panel .card-header h3{
-  margin: 0;
-  font-size: 16px;
-}
-
-/* ===== Admin Lite – complementos mínimos (preservar) ===== */
-/* Visual claro para campos desabilitados (somente leitura) — redundante,
-   mas mantido por compatibilidade com versões anteriores. */
-#org-panel input[disabled],
-#org-panel select[disabled],
-#org-panel textarea[disabled]{
-  background:  var(--al-disabled-bg);
-  color:       var(--al-disabled-fg);
-  border-color:rgba(0,0,0,.12);
-  box-shadow:  none;
-  cursor:      not-allowed;
+/* ===== No-blink (somente quando <html class="preauth">) ===== */
+html.preauth body{
+  opacity: 0;
+  pointer-events: none;
 }

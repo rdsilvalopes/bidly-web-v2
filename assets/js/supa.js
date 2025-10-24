@@ -1,79 +1,95 @@
+
+
 /**
- * Bidly — núcleo de autenticação (supa.js unificado)
+ * Bidly — núcleo de autenticação (supa.js unificado) — v2
  *
- * O que este arquivo faz:
- *  - Conecta ao Supabase com persistência de sessão em localStorage.
- *  - Expõe 4 funções globais: connectSupabase, requireAuth, applyAuthUI, logoutLocal.
- *  - Expõe o cliente como window.supa (para o restante do app) e window.sb (debug).
- *  - Opcional: liga os botões de logout (#btnOutTop / #btnOutMobile) se existirem.
+ * Mantém compatibilidade:
+ *  - connectSupabase(), requireAuth(), applyAuthUI(), logoutLocal()
+ * E expõe:
+ *  - logoutEverywhere(), onAuth(cb), getUID(), setLogoutRedirect(url)
  *
- * Como usar numa página:
- *  1) Carregue a UMD do Supabase (UMA vez):
- *     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
- *  2) Carregue ESTE arquivo (UMA vez):
- *     <script defer src="/assets/js/supa.js?v=1"></script>
- *  3) (Opcional) Chame applyAuthUI() para ligar a UI reativa de login/logado.
- *  4) Em páginas privadas, chame requireAuth() no boot.
+ * Correções:
+ *  - storageKey compartilhado (mesma sessão entre apps).
+ *  - signOut global (derruba outras abas/apps).
+ *  - listener que detecta troca de usuário e força redireciono.
  */
 
 (function () {
-  // Evita registrar tudo duas vezes se o arquivo for incluído por engano.
-  if (
-    window.connectSupabase &&
-    window.requireAuth &&
-    window.applyAuthUI &&
-    window.logoutLocal
-  ) {
-    console.warn("[supa.js] Já inicializado — verifique se não há scripts duplicados.");
-    return;
-  }
+  if (window.__supa_init) return; // evita duplo load
+  window.__supa_init = true;
 
-  // >>>>> CONFIG (use os valores do seu projeto Supabase)
+  // >>>>> CONFIG
   const SUPABASE_URL  = "https://itkyxteikthchvagtwnf.supabase.co";
   const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0a3l4dGVpa3RoY2h2YWd0d25mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODM2ODUsImV4cCI6MjA3NDc1OTY4NX0._02PVy_IF26Wrks9XsRgfXN-pHjbe79L3tznnv-J_ME";
+  const STORAGE_KEY   = "sb-bidly-auth"; // *** COMPARTILHADO ENTRE APP E ADMIN ***
+  const LOGOUT_REDIRECT_DEFAULT = "/index.html";
   // <<<<< CONFIG
 
-  /** Cliente compartilhado (singleton). */
   let _sb = null;
+  let _currentUID = null;
+  let _logoutRedirect = window.__SUPA_LOGOUT_REDIRECT || LOGOUT_REDIRECT_DEFAULT;
 
-  /** Garante que a UMD do Supabase foi carregada. */
   function ensureUMD() {
     if (!window.supabase || typeof window.supabase.createClient !== "function") {
-      throw new Error("A UMD do Supabase não está carregada. Inclua o <script> da UMD ANTES de supa.js.");
+      throw new Error("A UMD do Supabase não está carregada antes do supa.js.");
     }
   }
 
-  /**
-   * connectSupabase()
-   * - Cria (se necessário) e memoriza o cliente do Supabase.
-   * - Expõe em window.supa (para o app) e window.sb (para debug).
-   */
+  function setLogoutRedirect(url) {
+    _logoutRedirect = url || LOGOUT_REDIRECT_DEFAULT;
+  }
+
   async function connectSupabase() {
     if (_sb) return _sb;
     ensureUMD();
 
     _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
       auth: {
-        persistSession: true,      // mantém login ao navegar/recarregar
-        autoRefreshToken: true,    // renova o token automaticamente
-        detectSessionInUrl: true,  // processa tokens recebidos via URL (magic link)
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+        storageKey: STORAGE_KEY,
       },
-      global: {
-        headers: { "x-client-info": "bidly-web" }, // opcional: identificação do app
-      },
+      global: { headers: { "x-client-info": "bidly-web" } },
     });
 
-    // Disponibiliza imediatamente para outros scripts.
-    window.supa = _sb; // <- usado pelo activation.js e demais trechos
-    window.sb   = _sb; // <- útil para inspeção via DevTools
+    window.supa = _sb;
+    window.sb   = _sb;
 
-    // Liga botões de logout se existirem na página atual.
+    // guarda UID atual
+    const { data } = await _sb.auth.getSession();
+    _currentUID = data?.session?.user?.id || null;
+
+    // reage a login/logout/troca de usuário/refresh
+    _sb.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user?.id || null;
+
+      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+        hardRedirect(_logoutRedirect);
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+        if (_currentUID && uid && uid !== _currentUID) {
+          // usuário mudou em outra aba/app → volta pra login
+          hardRedirect(_logoutRedirect);
+          return;
+        }
+        _currentUID = uid;
+      }
+      // demais eventos: UI reativa será atualizada por applyAuthUI()
+    });
+
     wireLogoutButtons();
-
     return _sb;
   }
 
-  /** Lê a sessão atual (ou null). */
+  function hardRedirect(url) {
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch {}
+    window.location.replace(url || LOGOUT_REDIRECT_DEFAULT); // não deixa voltar
+  }
+
   async function getCurrentSession() {
     const sb = await connectSupabase();
     const { data, error } = await sb.auth.getSession();
@@ -81,40 +97,23 @@
     return data?.session || null;
   }
 
-  /**
-   * requireAuth()
-   * - Em páginas PRIVADAS: chama no boot.
-   * - Se não houver sessão, redireciona para /index.html e interrompe o fluxo.
-   * - Retorna a sessão quando presente.
-   */
   async function requireAuth() {
     const session = await getCurrentSession();
     if (!session) {
-      window.location.href = "/index.html";
-      throw new Error("Sem sessão. Redirecionado para /index.html.");
+      hardRedirect(_logoutRedirect);
+      throw new Error("Sem sessão. Redirecionado.");
     }
     return session;
   }
 
-  /**
-   * applyAuthUI()
-   * - Liga a “UI reativa” de login/logado.
-   * - Esconde elementos com [data-guest] quando logado.
-   * - Mostra elementos com [data-auth] quando logado.
-   * - Preenche #userEmail com o e-mail da sessão (se existir).
-   */
   async function applyAuthUI() {
     const sb = await connectSupabase();
-
-    // Helpers de UI
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     const show = (nodes, on) => nodes.forEach((n) => n.classList.toggle("hide", !on));
-
     const guestEls = $$("[data-guest]");
     const authEls  = $$("[data-auth]");
     const emailEl  = document.getElementById("userEmail");
 
-    // Aplica estado atual
     const render = (session) => {
       const logged = !!session;
       show(guestEls, !logged);
@@ -123,42 +122,43 @@
     };
 
     render(await getCurrentSession());
-
-    // Mantém atualizado com mudanças (login/logout/refresh)
-    sb.auth.onAuthStateChange((_event, session) => render(session));
+    sb.auth.onAuthStateChange((_ev, session) => render(session));
   }
 
-  /**
-   * logoutLocal()
-   * - Faz signOut “local” (limpa storage) e depois signOut global por segurança.
-   * - Use este método para o botão “Sair”.
-   */
+  // limpa storage local e também derruba em outros devices/abas
   async function logoutLocal() {
     const sb = await connectSupabase();
-    try { await sb.auth.signOut({ scope: "local" }); } catch {}
-    try { await sb.auth.signOut(); } catch {}
+    try { await sb.auth.signOut({ scope: "local"  }); } catch {}
+    try { await sb.auth.signOut({ scope: "global" }); } catch {}
   }
 
-  /** Liga #btnOutTop e #btnOutMobile, se existirem. */
+  async function logoutEverywhere() {
+    const sb = await connectSupabase();
+    try { await sb.auth.signOut({ scope: "global" }); }
+    finally { hardRedirect(_logoutRedirect); }
+  }
+
   function wireLogoutButtons() {
-    const bind = (id) => {
+    ["btnOutTop", "btnOutMobile"].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener("click", async () => {
-        try { await logoutLocal(); } finally { window.location.href = "/index.html"; }
-      });
-    };
-    bind("btnOutTop");
-    bind("btnOutMobile");
+      el.addEventListener("click", async () => { await logoutEverywhere(); });
+    });
   }
 
-  // Exporta para uso global nas páginas.
-  window.connectSupabase = connectSupabase;
-  window.requireAuth    = requireAuth;
-  window.applyAuthUI    = applyAuthUI;
-  window.logoutLocal    = logoutLocal;
+  function onAuth(cb) { connectSupabase().then((sb)=> sb.auth.onAuthStateChange(cb)); }
+  function getUID()   { return _currentUID; }
 
-  // **Inicializa imediatamente** para que window.supa exista o quanto antes.
-  // (não precisamos aguardar aqui; o createClient é síncrono)
+  // exporta globais
+  window.connectSupabase   = connectSupabase;
+  window.requireAuth       = requireAuth;
+  window.applyAuthUI       = applyAuthUI;
+  window.logoutLocal       = logoutLocal;
+  window.logoutEverywhere  = logoutEverywhere;
+  window.onAuth            = onAuth;
+  window.getUID            = getUID;
+  window.setLogoutRedirect = setLogoutRedirect;
+
+  // boot imediato
   connectSupabase();
 })();

@@ -1,71 +1,86 @@
-// /assets/js/repo.js
+/* repo/documents.repo.js */
+window.Bidly = window.Bidly || {};
+Bidly.repo = Bidly.repo || {};
 
-// helper interno para pegar o client sempre inicializado
-async function getClient() {
-  if (!window.sb || !window.sb.auth) {
-    // supa.js expõe connectSupabase()
-    await connectSupabase();
-  }
-  return window.sb;
-}
+(function(repo) {
+  const pick = (a, b) => (a ?? b);
 
-// Garante que o profile exista; cria se necessário (id do usuário como PK)
-async function getOrCreateMyProfile() {
-  const sb = await getClient();
-  const { data: userData, error: userErr } = await sb.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData?.user;
-  if (!user?.id) throw new Error("Usuário não autenticado.");
-
-  // tenta selecionar
-  let { data: row, error: selErr } = await sb
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  // PGRST116 = no rows; em algumas versões vem status 406/404
-  const noRows =
-    selErr &&
-    (selErr.code === "PGRST116" ||
-      selErr.details?.includes("Results contain 0 rows") ||
-      selErr.message?.toLowerCase().includes("not found"));
-
-  if (noRows) {
-    // cria linha "vazia" para habilitar updates posteriores (RLS: insert próprio)
-    const { data: ins, error: insErr } = await sb
-      .from("profiles")
-      .insert({ id: user.id })
-      .select("*")
-      .single();
-    if (insErr) throw insErr;
-    return ins;
+  async function sbClient() {
+    return await window.connectSupabase();
   }
 
-  if (selErr) throw selErr;
-  return row;
-}
+  async function getSessionUserId(sb) {
+    const { data } = await sb.auth.getSession();
+    return data?.session?.user?.id || null;
+  }
 
-// Upsert SEMPRE com id; fecha a porta para erros de update sem linha
-async function updateMyProfile(patch) {
-  const sb = await getClient();
-  const { data: userData, error: userErr } = await sb.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData?.user;
-  if (!user?.id) throw new Error("Usuário não autenticado.");
+  function constants() {
+    return window.Bidly?.constants || {};
+  }
 
-  // upsert por id — requer policy de insert/update próprio
-  const { data, error } = await sb
-    .from("profiles")
-    .upsert({ id: user.id, ...patch }, { onConflict: "id" })
-    .select("id, role, accept_terms_at")
-    .single();
-  if (error) throw error;
-  return data;
-}
+  // === SELECT único do doc do usuário logado (RLS cuida do filtro por user_id)
+  async function getMyDocument(type) {
+    const sb = await sbClient();
+    const { data, error } = await sb
+      .from('documents')
+      .select('status, storage_path, submitted_at, reviewed_at, rejection_reason')
+      .eq('type', type)
+      .maybeSingle(); // evita PGRST116 quando não existe
 
-// API pública do "repo"
-window.repo = {
-  getOrCreateMyProfile,
-  updateMyProfile,
-};
+    if (error) return { ok:false, error, data:null };
+    return { ok:true, data: data || null };
+  }
+
+  // === Upload para Storage (caminho canônico: {uid}/{type}.pdf)
+  async function uploadPdf(type, file) {
+    const sb = await sbClient();
+    const C  = constants();
+    const BUCKET = C.DOCS_BUCKET || 'org-docs';
+
+    const uid = await getSessionUserId(sb);
+    if (!uid) return { ok:false, error: new Error('Sessão expirada'), path:null };
+
+    const filePath = `${uid}/${type}.pdf`;
+    const { error } = await sb.storage.from(BUCKET)
+      .upload(filePath, file, { upsert: true, contentType: 'application/pdf' });
+
+    if (error) return { ok:false, error, path:null };
+    return { ok:true, path:filePath };
+  }
+
+  // === RPC estável para registrar envio
+  async function sendDocument(type, storagePath) {
+    const sb = await sbClient();
+    const { error } = await sb.rpc('send_document', {
+      p_type: type,
+      p_storage_path: storagePath
+    });
+    if (error) return { ok:false, error };
+    return { ok:true };
+  }
+
+  // === Signed URL (ou null)
+  async function signedUrlOrNull(storagePath) {
+    try {
+      if (!storagePath) return null;
+      const sb = await sbClient();
+      const C  = constants();
+      const BUCKET = C.DOCS_BUCKET || 'org-docs';
+      const TTL    = pick(C.DOCS_SIGNED_URL_TTL, 60 * 60 * 24);
+      const { data, error } = await sb.storage
+        .from(BUCKET)
+        .createSignedUrl(storagePath, TTL);
+      if (error) return null;
+      return data?.signedUrl || null;
+    } catch {
+      return null;
+    }
+  }
+
+  repo.documents = {
+    getMyDocument,
+    uploadPdf,
+    sendDocument,
+    signedUrlOrNull,
+  };
+})(Bidly.repo);

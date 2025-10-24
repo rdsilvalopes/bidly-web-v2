@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bidly • Admin Lite Pro</title>
+
+  <!-- CSS exclusivo do login -->
+  <link rel="stylesheet" href="/assets/css/login.admin.css?v=AL-login-1" />
+  <link rel="stylesheet" href="/assets/css/standard-ui.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/admin-lite.css?v=AL1" />
+  
+
+</head>
+
+<body class="al-shell">
+  <main class="al-container">
+    <!-- Cartão de login -->
+    <section id="loginCard" class="al-card al-card--login">
+      <header class="al-head">
+        <h1 class="al-title">Bidly • Admin Lite Pro</h1>
+        <p class="al-subtitle">Acesso restrito. Entre com seu e-mail e senha do Bidly.</p>
+      </header>
+
+      <form id="loginForm" class="al-form" autocomplete="on" novalidate>
+        <div class="al-col-12">
+          <label class="al-label" for="admEmail">E-mail</label>
+          <input id="admEmail" class="al-input" type="email" placeholder="email@empresa.com" />
+        </div>
+
+        <div class="al-col-12">
+          <label class="al-label" for="admPass">Senha</label>
+          <input id="admPass" class="al-input" type="password" placeholder="Sua senha" />
+        </div>
+
+        <div class="al-col-12 al-actions">
+          <span class="al-spacer"></span>
+          <button id="btnLogin" class="al-btn al-btn--primary" type="submit">Entrar</button>
+        </div>
+
+        <div class="al-col-12">
+          <div id="loginMsg" class="al-msg" style="display:none"></div>
+          <p class="al-footnote">Somente usuários com perfis administrativos podem acessar.</p>
+        </div>
+      </form>
+    </section>
+
+    <!-- O SPA do Admin é montado em outra página -->
+    <section id="adminApp" class="hide"></section>
+  </main>
+
+  <!-- Supabase + núcleo -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.1/dist/umd/supabase.js"></script>
+  <script defer src="/assets/js/supa.js?v=1"></script>
+
+  <!-- Controlador (login + RBAC + montagem) -->
+  <script defer src="/assets/js/admin/login.js?v=AL4"></script>
+
+
+
+</body>
+</html>

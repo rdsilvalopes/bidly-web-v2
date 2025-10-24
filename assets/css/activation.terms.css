@@ -1,0 +1,35 @@
+/* ========================
+   Activation • TERMS (folha de termos)
+   ======================== */
+
+/* Header/rodapé centralizados no mesmo grid da inner */
+.sheet--terms .sheet__header,
+.sheet--terms .sheet__footer{
+  max-width:980px; margin-left:auto; margin-right:auto;
+  padding-left:var(--sheet-pad); padding-right:var(--sheet-pad);
+  box-sizing:border-box;
+}
+
+/* Caixa rolável dos termos */
+#termsBox.terms__box{
+  height:62vh; overflow:auto;
+  border:1px solid rgba(16,24,40,.12); border-radius:10px;
+  background:#fff; padding:18px;
+  max-width:980px; margin:0 auto;
+}
+
+/* Reset tipográfico do HTML carregado (evita estilos “estranhos”) */
+.sheet--terms #termsBox{
+  color:#111;
+  font:16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.sheet--terms #termsBox h1,
+.sheet--terms #termsBox h2,
+.sheet--terms #termsBox h3{
+  text-shadow:none !important; filter:none !important;
+  letter-spacing:normal !important; text-transform:none !important;
+  color:#111 !important; margin-top:.25rem; margin-bottom:.5rem;
+}
+.sheet--terms #termsBox h1{ font-size:28px; font-weight:700; }
+.sheet--terms #termsBox h2{ font-size:20px; font-weight:700; }
+.sheet--terms #termsBox small{ color:#6b7280; }

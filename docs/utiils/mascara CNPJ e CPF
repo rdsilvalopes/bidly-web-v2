@@ -1,0 +1,10 @@
+<input id="cpf" data-mask="cpf">
+<input id="cnpj" data-mask="cnpj">
+<input id="cep" data-mask="cep">
+<script src="assets/js/utils/mask.js"></script>
+<script>
+  // opcional, se quiser ligar manualmente:
+  // Bidly.mask.bind(document.getElementById('cpf'), 'cpf');
+  // ou automático por container:
+  // Bidly.mask.wire(document);
+</script>
